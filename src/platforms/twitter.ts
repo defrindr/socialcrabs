@@ -702,29 +702,21 @@ export class TwitterHandler extends BasePlatformHandler {
         tweetUrl = page.url();
         log.info('Tweet posted, URL captured', { tweetUrl });
       } catch (e) {
-        // Fallback: navigate to own profile to get the latest tweet
-        // Get username from page - look for the profile link in the sidebar
-        const usernameLink = await page.$('a[href*="/"][data-testid="UserAvatar"]');
-        let username = 'home';
-        if (usernameLink) {
-          const href = await usernameLink.getAttribute('href');
-          if (href) {
-            username = href.replace('/', '');
-          }
-        }
-        await page.goto(`${this.baseUrl}/${username}`);
-        await page.waitForTimeout(2000);
+        // Fallback: navigate to home/timeline and get the most recent tweet
+        // This is more reliable than trying to find the profile link
+        await page.goto(`${this.baseUrl}/home`);
+        await page.waitForTimeout(3000);
         
-        // Get the first tweet from the profile
+        // Get the first tweet from timeline (should be the one we just posted)
         const firstTweet = await page.$('a[href*="/status/"]');
         if (firstTweet) {
           const href = await firstTweet.getAttribute('href');
           if (href) {
             tweetUrl = href.startsWith('http') ? href : `${this.baseUrl}${href}`;
-            log.info('Tweet URL captured from profile', { tweetUrl });
+            log.info('Tweet URL captured from timeline', { tweetUrl });
           }
         } else {
-          log.warn('Could not capture tweet URL from profile');
+          log.warn('Could not capture tweet URL from timeline');
         }
       }
       
