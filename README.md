@@ -345,13 +345,20 @@ INSTAGRAM_PASSWORD="your_password"
 LINKEDIN_EMAIL=your_email
 LINKEDIN_PASSWORD="your_password"
 
-# Twitter/X - GraphQL API (cookie auth for search/read)
+# Twitter/X - Cookie auth (required for ALL methods!)
+# ⚠️ IMPORTANT: Twitter requires COOKIE auth, NOT username/password!
+# Get cookies from browser:
+# 1. Open x.com in Chrome/Edge (logged in as your account)
+# 2. Open DevTools (F12) → Application tab → Cookies → x.com
+# 3. Copy the "auth_token" and "ct0" values
+# 4. Save them to sessions/twitter.json (see below) OR set as env vars:
 AUTH_TOKEN=your_auth_token
 CT0=your_ct0_token
 
-# Twitter/X - Playwright (optional, for like/follow/reply)
-TWITTER_USERNAME=your_username
-TWITTER_PASSWORD="your_password"
+# ⚠️ DO NOT use username/password - Twitter blocks API login!
+# The session will fail with "login" or "auth" errors if you use wrong method.
+
+# Twitter/X - Uses COOKIES (see section above)
 ```
 
 #### Session Files
