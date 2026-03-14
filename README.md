@@ -345,18 +345,25 @@ INSTAGRAM_PASSWORD="your_password"
 LINKEDIN_EMAIL=your_email
 LINKEDIN_PASSWORD="your_password"
 
-# Twitter/X - Cookie auth (required for ALL methods!)
+# Twitter/X - Cookie auth (required!)
 # ⚠️ IMPORTANT: Twitter requires COOKIE auth, NOT username/password!
-# Get cookies from browser:
+# 
+# TWO OPTIONS - Pick ONE:
+#
+# OPTION 1 (RECOMMENDED): Just set env vars - sessions/twitter.json will be auto-generated!
 # 1. Open x.com in Chrome/Edge (logged in as your account)
 # 2. Open DevTools (F12) → Application tab → Cookies → x.com
-# 3. Copy the "auth_token" and "ct0" values
-# 4. Save them to sessions/twitter.json (see below) OR set as env vars:
+# 3. Copy the "auth_token" and "ct0" values (the token strings, NOT the whole cookie)
+# 4. Add to .env:
 AUTH_TOKEN=your_auth_token
 CT0=your_ct0_token
-
+#
+# That's it! SocialCrabs will auto-create sessions/twitter.json on first run.
+#
+# OPTION 2: Manual session file - create sessions/twitter.json with full cookie objects
+# (see sessions/twitter.json.example in docs)
+#
 # ⚠️ DO NOT use username/password - Twitter blocks API login!
-# The session will fail with "login" or "auth" errors if you use wrong method.
 
 # Twitter/X - Uses COOKIES (see section above)
 ```

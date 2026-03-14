@@ -230,6 +230,11 @@ export class BrowserManager {
 
     if (!fs.existsSync(sessionPath)) {
       log.debug(`No session found for ${platform}`);
+      
+      // Try to create session from environment variables (Twitter only)
+      if (platform === 'twitter') {
+        return await this.createSessionFromEnv(platform, context);
+      }
       return false;
     }
 
@@ -266,6 +271,79 @@ export class BrowserManager {
       });
       return false;
     }
+  }
+
+  /**
+   * Create a basic session from environment variables (for Twitter)
+   * This allows users to just set AUTH_TOKEN and CT0 in .env without needing sessions/twitter.json
+   */
+  private async createSessionFromEnv(
+    platform: Platform,
+    context: BrowserContext
+  ): Promise<boolean> {
+    const authToken = process.env.AUTH_TOKEN || process.env.SOCIALCRABS_AUTH_TOKEN;
+    const ct0 = process.env.CT0 || process.env.SOCIALCRABS_CT0;
+
+    if (!authToken || !ct0) {
+      log.debug(`No AUTH_TOKEN or CT0 in environment for ${platform}`);
+      return false;
+    }
+
+    log.info(`Creating session from environment variables for ${platform}`);
+
+    const now = Date.now();
+    const futureExpiry = Math.floor(now / 1000) + (180 * 24 * 60 * 60); // ~180 days from now
+
+    const cookies = [
+      {
+        name: 'auth_token',
+        value: authToken,
+        domain: '.x.com',
+        path: '/',
+        expires: futureExpiry,
+        httpOnly: true,
+        secure: true,
+        sameSite: 'None' as const,
+      },
+      {
+        name: 'ct0',
+        value: ct0,
+        domain: '.x.com',
+        path: '/',
+        expires: futureExpiry,
+        httpOnly: false,
+        secure: true,
+        sameSite: 'Lax' as const,
+      },
+      {
+        name: 'lang',
+        value: 'en',
+        domain: 'x.com',
+        path: '/',
+        expires: -1,
+        httpOnly: false,
+        secure: false,
+        sameSite: 'Lax' as const,
+      },
+    ];
+
+    // Add cookies to context
+    await context.addCookies(cookies);
+
+    // Save the session file for future use
+    const session: Session = {
+      platform,
+      cookies,
+      localStorage: {},
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    const sessionPath = path.join(this.sessionDir, `${platform}.json`);
+    fs.writeFileSync(sessionPath, JSON.stringify(session, null, 2));
+
+    log.info(`Session created from environment variables for ${platform}`);
+    return true;
   }
 
   /**
