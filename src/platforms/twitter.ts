@@ -673,6 +673,13 @@ export class TwitterHandler extends BasePlatformHandler {
     try {
       log.info('Posting tweet', { text: payload.text.substring(0, 50) });
 
+      // CRITICAL: Navigate to home first to clear any reply/quote context
+      // If we came from a tweet page, X might think we're replying
+      await this.navigate(`${this.baseUrl}/home`);
+      await this.think();
+      await this.pause();
+      
+      // Now navigate to compose NEW tweet (not reply)
       await this.navigate(`${this.baseUrl}/compose/tweet`);
       await this.think();
 
