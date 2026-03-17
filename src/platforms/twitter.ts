@@ -696,27 +696,49 @@ export class TwitterHandler extends BasePlatformHandler {
       await this.clickHuman(SELECTORS.tweetButton);
 
       // Wait for navigation to the new tweet and capture the URL
+      // Increased timeout - X sometimes takes longer to redirect
       let tweetUrl = '';
       try {
-        await page.waitForURL(/\/status\/\d+/, { timeout: 10000 });
+        await page.waitForURL(/\/status\/\d+/, { timeout: 30000 });
         tweetUrl = page.url();
         log.info('Tweet posted, URL captured', { tweetUrl });
       } catch (e) {
-        // Fallback: navigate to home/timeline and get the most recent tweet
-        // This is more reliable than trying to find the profile link
+        // Fallback: navigate to the logged-in user's profile and get their most recent tweet
+        // NOT home timeline (which shows ANYONE's tweets - that's the bug!)
         await page.goto(`${this.baseUrl}/home`);
-        await page.waitForTimeout(3000);
+        await page.waitForTimeout(2000);
         
-        // Get the first tweet from timeline (should be the one we just posted)
+        // Find the logged-in user's profile link in the navigation
+        // Usually in the nav bar with the user's handle
+        const userProfileLink = await page.$('a[href*="/"][data-testid="UserAvatar"], nav a[href*="/"]:first-child');
+        
+        let profileUrl = '';
+        if (userProfileLink) {
+          profileUrl = await userProfileLink.getAttribute('href');
+          if (profileUrl) {
+            profileUrl = profileUrl.startsWith('http') ? profileUrl : `${this.baseUrl}${profileUrl}`;
+            await page.goto(profileUrl);
+            await page.waitForTimeout(2000);
+          }
+        }
+        
+        // If we couldn't find profile, try going to the profile directly
+        if (!profileUrl) {
+          // Try common profile paths
+          await page.goto(`${this.baseUrl}/i/flow/login`);
+          await page.waitForTimeout(2000);
+        }
+        
+        // Get the first tweet from profile (our own tweet)
         const firstTweet = await page.$('a[href*="/status/"]');
         if (firstTweet) {
           const href = await firstTweet.getAttribute('href');
           if (href) {
             tweetUrl = href.startsWith('http') ? href : `${this.baseUrl}${href}`;
-            log.info('Tweet URL captured from timeline', { tweetUrl });
+            log.info('Tweet URL captured from profile (fallback)', { tweetUrl });
           }
         } else {
-          log.warn('Could not capture tweet URL from timeline');
+          log.warn('Could not capture tweet URL from profile');
         }
       }
       
