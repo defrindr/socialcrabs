@@ -1,6 +1,6 @@
 /**
  * SocialCrabs Notification Service
- * 
+ *
  * CENTRALIZED NOTIFICATIONS — See docs/NOTIFICATION_TEMPLATES.md for specs.
  * All templates defined here. Cron jobs pass context, we format.
  */
@@ -24,7 +24,7 @@ interface NotificationDetails {
   postUrl?: string;
   profileUrl?: string;
   url?: string;
-  
+
   // X Engagement
   tweet?: string;
   author?: string;
@@ -32,28 +32,28 @@ interface NotificationDetails {
   reply?: string;
   language?: string;
   behaviors?: string;
-  
+
   // X Follow
   username?: string;
   followers?: number | string;
   queueRemaining?: number;
-  
+
   // LinkedIn Engagement
   articleTitle?: string;
   articleAuthor?: string;
   comment?: string;
   commentText?: string;
   sessionInfo?: string;
-  
+
   // LinkedIn Connection
   degree?: string;
   method?: string;
   note?: string;
-  
+
   // Instagram
   action?: string;
   actions?: string[];
-  
+
   // Error
   error?: string;
   attempted?: string;
@@ -93,7 +93,7 @@ function addFooterFields(lines: string[], d: NotificationDetails): void {
 function formatXEngagement(success: boolean, target: string, d: NotificationDetails): string {
   const status = success ? '✅' : '❌';
   const lines: string[] = [];
-  
+
   lines.push(`🐦 **X ENGAGEMENT** ${status}`);
   lines.push('');
   lines.push(`**Tweet:** ${d.tweet || d.postUrl || target}`);
@@ -109,7 +109,7 @@ function formatXEngagement(success: boolean, target: string, d: NotificationDeta
   addFooterFields(lines, d);
   lines.push('');
   lines.push('_SocialCrabs X/Twitter Automation_');
-  
+
   return lines.join('\n');
 }
 
@@ -119,7 +119,7 @@ function formatXEngagement(success: boolean, target: string, d: NotificationDeta
 function formatXFollow(success: boolean, target: string, d: NotificationDetails): string {
   const status = success ? '✅' : '❌';
   const lines: string[] = [];
-  
+
   lines.push(`👥 **X FOLLOW** ${status}`);
   lines.push('');
   lines.push(`**Target:** @${(d.username || target).replace('@', '')}`);
@@ -130,7 +130,7 @@ function formatXFollow(success: boolean, target: string, d: NotificationDetails)
   addFooterFields(lines, d);
   lines.push('');
   lines.push('_SocialCrabs X/Twitter Automation_');
-  
+
   return lines.join('\n');
 }
 
@@ -140,7 +140,7 @@ function formatXFollow(success: boolean, target: string, d: NotificationDetails)
 function formatXLike(success: boolean, target: string, d: NotificationDetails): string {
   const status = success ? '✅' : '❌';
   const lines: string[] = [];
-  
+
   lines.push(`🐦 **X ENGAGEMENT** ${status}`);
   lines.push('');
   lines.push(`**Tweet:** ${d.tweet || d.postUrl || target}`);
@@ -153,17 +153,21 @@ function formatXLike(success: boolean, target: string, d: NotificationDetails): 
   addFooterFields(lines, d);
   lines.push('');
   lines.push('_SocialCrabs X/Twitter Automation_');
-  
+
   return lines.join('\n');
 }
 
 /**
  * Format LinkedIn Engagement notification
  */
-function formatLinkedInEngagement(success: boolean, target: string, d: NotificationDetails): string {
+function formatLinkedInEngagement(
+  success: boolean,
+  target: string,
+  d: NotificationDetails
+): string {
   const status = success ? '✅' : '❌';
   const lines: string[] = [];
-  
+
   lines.push(`🔗 **LINKEDIN ENGAGEMENT** ${status}`);
   lines.push('');
   if (d.articleTitle) {
@@ -182,17 +186,21 @@ function formatLinkedInEngagement(success: boolean, target: string, d: Notificat
   addFooterFields(lines, d);
   lines.push('');
   lines.push('_SocialCrabs LinkedIn Automation_');
-  
+
   return lines.join('\n');
 }
 
 /**
  * Format LinkedIn Connection notification
  */
-function formatLinkedInConnection(success: boolean, target: string, d: NotificationDetails): string {
+function formatLinkedInConnection(
+  success: boolean,
+  target: string,
+  d: NotificationDetails
+): string {
   const status = success ? '✅' : '❌';
   const lines: string[] = [];
-  
+
   lines.push(`🔗 **LINKEDIN CONNECTION** ${status}`);
   lines.push('');
   lines.push(`**Profile:** ${d.username || extractUsername(target, 'linkedin')}`);
@@ -204,22 +212,28 @@ function formatLinkedInConnection(success: boolean, target: string, d: Notificat
   addFooterFields(lines, d);
   lines.push('');
   lines.push('_SocialCrabs LinkedIn Automation_');
-  
+
   return lines.join('\n');
 }
 
 /**
  * Format Instagram Engagement notification
  */
-function formatInstagramEngagement(success: boolean, target: string, d: NotificationDetails): string {
+function formatInstagramEngagement(
+  success: boolean,
+  target: string,
+  d: NotificationDetails
+): string {
   const status = success ? '✅' : '❌';
   const lines: string[] = [];
-  
+
   lines.push(`📸 **INSTAGRAM ENGAGEMENT** ${status}`);
   lines.push('');
-  lines.push(`**Target:** @${(d.username || extractUsername(target, 'instagram')).replace('@', '')}`);
+  lines.push(
+    `**Target:** @${(d.username || extractUsername(target, 'instagram')).replace('@', '')}`
+  );
   lines.push(`**Post:** ${d.postUrl || d.url || target || 'N/A'}`);
-  
+
   // Determine action
   let actionText = d.action;
   if (!actionText && d.actions) {
@@ -236,7 +250,7 @@ function formatInstagramEngagement(success: boolean, target: string, d: Notifica
   addFooterFields(lines, d);
   lines.push('');
   lines.push('_SocialCrabs Instagram Automation_');
-  
+
   return lines.join('\n');
 }
 
@@ -246,7 +260,7 @@ function formatInstagramEngagement(success: boolean, target: string, d: Notifica
 function formatInstagramFollow(success: boolean, target: string, d: NotificationDetails): string {
   const status = success ? '✅' : '❌';
   const lines: string[] = [];
-  
+
   lines.push(`📸 **INSTAGRAM FOLLOW** ${status}`);
   lines.push('');
   lines.push(`**Target:** @${(d.username || target).replace('@', '')}`);
@@ -257,7 +271,7 @@ function formatInstagramFollow(success: boolean, target: string, d: Notification
   addFooterFields(lines, d);
   lines.push('');
   lines.push('_SocialCrabs Instagram Automation_');
-  
+
   return lines.join('\n');
 }
 
@@ -272,15 +286,21 @@ function escapeMarkdown(text: string): string {
 /**
  * Format error notification
  */
-function formatError(platform: Platform, action: ActionType, target: string, error: string, d: NotificationDetails): string {
+function formatError(
+  platform: Platform,
+  action: ActionType,
+  target: string,
+  error: string,
+  d: NotificationDetails
+): string {
   const emoji = platform === 'twitter' ? '🐦' : platform === 'linkedin' ? '🔗' : '📸';
   const platformName = platform === 'twitter' ? 'X' : platform.toUpperCase();
   const actionName = action.toUpperCase();
-  
+
   // Escape error message but NOT URLs (dots in URLs break links)
   const safeError = escapeMarkdown(error);
   const safeTarget = target; // URLs must NOT be escaped
-  
+
   const lines: string[] = [];
   lines.push(`${emoji} **${platformName} ${actionName}** ❌`);
   lines.push('');
@@ -291,7 +311,7 @@ function formatError(platform: Platform, action: ActionType, target: string, err
   lines.push(`**Time:** ${getTimestamp()}`);
   lines.push('');
   lines.push(`_SocialCrabs ${platformName} Automation_`);
-  
+
   return lines.join('\n');
 }
 
@@ -326,12 +346,12 @@ function formatNotification(
   details?: Record<string, unknown>
 ): string {
   const d = (details || {}) as NotificationDetails;
-  
+
   // Error case
   if (!success && error) {
     return formatError(platform, action, target, error, d);
   }
-  
+
   // Route to specific formatter
   if (platform === 'twitter') {
     if (action === 'follow') return formatXFollow(success, target, d);
@@ -339,17 +359,17 @@ function formatNotification(
     if (action === 'comment' || action === 'reply') return formatXEngagement(success, target, d);
     return formatXEngagement(success, target, d); // Default for X
   }
-  
+
   if (platform === 'linkedin') {
     if (action === 'connect') return formatLinkedInConnection(success, target, d);
     return formatLinkedInEngagement(success, target, d); // like, comment
   }
-  
+
   if (platform === 'instagram') {
     if (action === 'follow') return formatInstagramFollow(success, target, d);
     return formatInstagramEngagement(success, target, d); // like, comment
   }
-  
+
   // Fallback (should never reach here but TypeScript wants it)
   return `${String(platform).toUpperCase()} ${String(action).toUpperCase()} ${success ? '✅' : '❌'}\nTarget: ${target}`;
 }
@@ -360,19 +380,19 @@ function formatNotification(
 
 export class Notifier {
   private config: NotificationConfig;
-  
+
   constructor(config: NotificationConfig) {
     this.config = config;
   }
-  
+
   isEnabled(): boolean {
     return this.config.enabled;
   }
-  
+
   isEventEnabled(event: NotificationEvent): boolean {
     return this.config.enabled && this.config.events[event];
   }
-  
+
   getChannels(): NotificationChannel[] {
     const channels: NotificationChannel[] = [];
     if (this.config.channels.telegram) channels.push('telegram');
@@ -380,21 +400,21 @@ export class Notifier {
     if (this.config.channels.webhook) channels.push('webhook');
     return channels;
   }
-  
+
   updateConfig(config: Partial<NotificationConfig>): void {
     this.config = { ...this.config, ...config };
   }
-  
+
   getConfig(): NotificationConfig {
     return this.config;
   }
-  
+
   async notify(payload: NotificationPayload): Promise<boolean> {
     if (!this.isEventEnabled(payload.event)) {
       log.debug('Notification skipped - event disabled', { event: payload.event });
       return false;
     }
-    
+
     const message = formatNotification(
       payload.platform,
       payload.action,
@@ -403,18 +423,18 @@ export class Notifier {
       payload.error,
       payload.details
     );
-    
+
     return this.broadcast(message);
   }
-  
+
   async broadcast(message: string): Promise<boolean> {
     if (!this.config.enabled) {
       log.debug('Notifications disabled, skipping broadcast');
       return false;
     }
-    
+
     const results: boolean[] = [];
-    
+
     if (this.config.channels.telegram) {
       results.push(await this.sendTelegram(message));
     }
@@ -424,10 +444,10 @@ export class Notifier {
     if (this.config.channels.webhook) {
       results.push(await this.sendWebhook(message));
     }
-    
-    return results.some(r => r);
+
+    return results.some((r) => r);
   }
-  
+
   async send(channel: NotificationChannel, message: string): Promise<boolean> {
     switch (channel) {
       case 'telegram':
@@ -441,7 +461,7 @@ export class Notifier {
         return false;
     }
   }
-  
+
   async sendTest(channel?: NotificationChannel): Promise<boolean> {
     const testMessage = `🧪 **NOTIFICATION TEST**
 
@@ -451,17 +471,17 @@ This is a test notification from SocialCrabs.
 **Timestamp:** ${new Date().toISOString()}
 
 _SocialCrabs Automation_`;
-    
+
     if (channel) {
       return this.send(channel, testMessage);
     }
     return this.broadcast(testMessage);
   }
-  
+
   private async sendTelegram(message: string): Promise<boolean> {
     const cfg = this.config.channels.telegram;
     if (!cfg) return false;
-    
+
     try {
       const url = `https://api.telegram.org/bot${cfg.botToken}/sendMessage`;
       const response = await fetch(url, {
@@ -474,13 +494,13 @@ _SocialCrabs Automation_`;
           disable_web_page_preview: true,
         }),
       });
-      
+
       if (!response.ok) {
         const error = await response.text();
         log.error('Telegram notification failed', { status: response.status, error });
         return false;
       }
-      
+
       log.debug('Telegram notification sent');
       return true;
     } catch (error) {
@@ -488,24 +508,24 @@ _SocialCrabs Automation_`;
       return false;
     }
   }
-  
+
   private async sendDiscord(message: string): Promise<boolean> {
     const cfg = this.config.channels.discord;
     if (!cfg) return false;
-    
+
     try {
       const response = await fetch(cfg.webhookUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content: message }),
       });
-      
+
       if (!response.ok) {
         const error = await response.text();
         log.error('Discord notification failed', { status: response.status, error });
         return false;
       }
-      
+
       log.debug('Discord notification sent');
       return true;
     } catch (error) {
@@ -513,24 +533,24 @@ _SocialCrabs Automation_`;
       return false;
     }
   }
-  
+
   private async sendWebhook(message: string): Promise<boolean> {
     const cfg = this.config.channels.webhook;
     if (!cfg) return false;
-    
+
     try {
       const response = await fetch(cfg.url, {
         method: cfg.method || 'POST',
         headers: { 'Content-Type': 'application/json', ...cfg.headers },
         body: JSON.stringify({ message, timestamp: Date.now(), source: 'socialcrabs' }),
       });
-      
+
       if (!response.ok) {
         const error = await response.text();
         log.error('Webhook notification failed', { status: response.status, error });
         return false;
       }
-      
+
       log.debug('Webhook notification sent');
       return true;
     } catch (error) {

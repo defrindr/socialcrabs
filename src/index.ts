@@ -3,13 +3,25 @@ import { RateLimiter, DEFAULT_RATE_LIMITS } from './utils/rate-limiter.js';
 import { InstagramHandler } from './platforms/instagram.js';
 import { TwitterHandler } from './platforms/twitter.js';
 import { LinkedInHandler } from './platforms/linkedin.js';
+import { FacebookHandler } from './platforms/facebook.js';
 import { createHttpServer } from './server/http.js';
 import { WebSocketManager } from './server/websocket.js';
 import { initLogger, log } from './utils/logger.js';
 import { configureDelays } from './utils/delays.js';
 import { loadConfig } from './utils/config.js';
 import { Notifier, initNotifier } from './services/notifier.js';
-import type { SocialCrabsConfig, Platform, RateLimitStatus, ServerConfig, BrowserConfig, RateLimitConfig, DelayConfig, SessionConfig, LoggingConfig, NotificationConfig } from './types/index.js';
+import type {
+  SocialCrabsConfig,
+  Platform,
+  RateLimitStatus,
+  ServerConfig,
+  BrowserConfig,
+  RateLimitConfig,
+  DelayConfig,
+  SessionConfig,
+  LoggingConfig,
+  NotificationConfig,
+} from './types/index.js';
 
 interface ResolvedConfig {
   server: ServerConfig;
@@ -33,6 +45,7 @@ export class SocialCrabs {
   public instagram: InstagramHandler;
   public twitter: TwitterHandler;
   public linkedin: LinkedInHandler;
+  public facebook: FacebookHandler;
 
   constructor(config?: SocialCrabsConfig) {
     // Load and merge config
@@ -40,10 +53,11 @@ export class SocialCrabs {
     this.config = {
       server: { ...defaultConfig.server, ...config?.server },
       browser: { ...defaultConfig.browser, ...config?.browser },
-      rateLimits: { 
+      rateLimits: {
         instagram: { ...defaultConfig.rateLimits.instagram, ...config?.rateLimits?.instagram },
         twitter: { ...defaultConfig.rateLimits.twitter, ...config?.rateLimits?.twitter },
         linkedin: { ...defaultConfig.rateLimits.linkedin, ...config?.rateLimits?.linkedin },
+        facebook: { ...defaultConfig.rateLimits.facebook, ...config?.rateLimits?.facebook },
       },
       delays: { ...defaultConfig.delays, ...config?.delays },
       session: { ...defaultConfig.session, ...config?.session },
@@ -71,16 +85,14 @@ export class SocialCrabs {
     });
 
     // Initialize browser manager
-    this.browserManager = new BrowserManager(
-      this.config.browser,
-      this.config.session.dir
-    );
+    this.browserManager = new BrowserManager(this.config.browser, this.config.session.dir);
 
     // Initialize rate limiter
     const rateLimits = {
       instagram: { ...DEFAULT_RATE_LIMITS.instagram, ...this.config.rateLimits.instagram },
       twitter: { ...DEFAULT_RATE_LIMITS.twitter, ...this.config.rateLimits.twitter },
       linkedin: { ...DEFAULT_RATE_LIMITS.linkedin, ...this.config.rateLimits.linkedin },
+      facebook: { ...DEFAULT_RATE_LIMITS.facebook, ...this.config.rateLimits.facebook },
     };
     this.rateLimiter = new RateLimiter(rateLimits, `${this.config.session.dir}/rate-limits.json`);
 
@@ -88,6 +100,7 @@ export class SocialCrabs {
     this.instagram = new InstagramHandler(this.browserManager, this.rateLimiter);
     this.twitter = new TwitterHandler(this.browserManager, this.rateLimiter);
     this.linkedin = new LinkedInHandler(this.browserManager, this.rateLimiter);
+    this.facebook = new FacebookHandler(this.browserManager, this.rateLimiter);
 
     log.info('SocialCrabs initialized', {
       headless: this.config.browser.headless,
@@ -143,6 +156,8 @@ export class SocialCrabs {
         return this.twitter.isLoggedIn();
       case 'linkedin':
         return this.linkedin.isLoggedIn();
+      case 'facebook':
+        return this.facebook.isLoggedIn();
       default:
         throw new Error(`Unknown platform: ${platform}`);
     }
@@ -159,6 +174,8 @@ export class SocialCrabs {
         return this.twitter.login();
       case 'linkedin':
         return this.linkedin.login();
+      case 'facebook':
+        return this.facebook.login();
       default:
         throw new Error(`Unknown platform: ${platform}`);
     }
@@ -179,6 +196,8 @@ export class SocialCrabs {
         return this.twitter.loginWithCredentials(username, password);
       case 'linkedin':
         return this.linkedin.loginWithCredentials(username, password);
+      case 'facebook':
+        return this.facebook.loginWithCredentials(username, password);
       default:
         throw new Error(`Unknown platform: ${platform}`);
     }
@@ -198,6 +217,9 @@ export class SocialCrabs {
       case 'linkedin':
         await this.linkedin.logout();
         break;
+      case 'facebook':
+        await this.facebook.logout();
+        break;
       default:
         throw new Error(`Unknown platform: ${platform}`);
     }
@@ -211,7 +233,10 @@ export class SocialCrabs {
     platforms: Record<Platform, { loggedIn: boolean; rateLimits: Record<string, RateLimitStatus> }>;
     uptime: number;
   }> {
-    const platforms: Record<Platform, { loggedIn: boolean; rateLimits: Record<string, RateLimitStatus> }> = {
+    const platforms: Record<
+      Platform,
+      { loggedIn: boolean; rateLimits: Record<string, RateLimitStatus> }
+    > = {
       instagram: {
         loggedIn: await this.isLoggedIn('instagram').catch(() => false),
         rateLimits: this.rateLimiter.getStatus('instagram'),
@@ -224,11 +249,32 @@ export class SocialCrabs {
         loggedIn: await this.isLoggedIn('linkedin').catch(() => false),
         rateLimits: this.rateLimiter.getStatus('linkedin'),
       },
+      facebook: {
+        loggedIn: await this.isLoggedIn('facebook').catch(() => false),
+        rateLimits: this.rateLimiter.getStatus('facebook'),
+      },
     };
 
     return {
       browser: this.browserManager.isRunning(),
       platforms,
+      uptime: process.uptime(),
+    };
+  }
+
+  async getStatusByPlatform(platform: Platform): Promise<{
+    browser: boolean;
+    platform: { loggedIn: boolean; rateLimits: Record<string, RateLimitStatus> };
+    uptime: number;
+  }> {
+    const loggedIn = await this.isLoggedIn(platform).catch(() => false);
+
+    return {
+      browser: this.browserManager.isRunning(),
+      platform: {
+        loggedIn,
+        rateLimits: this.rateLimiter.getStatus(platform),
+      },
       uptime: process.uptime(),
     };
   }
@@ -289,6 +335,7 @@ export { Notifier, initNotifier, getNotifier } from './services/notifier.js';
 export { InstagramHandler } from './platforms/instagram.js';
 export { TwitterHandler } from './platforms/twitter.js';
 export { LinkedInHandler } from './platforms/linkedin.js';
+export { FacebookHandler } from './platforms/facebook.js';
 
 // Default export
 export default SocialCrabs;

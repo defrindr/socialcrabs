@@ -23,10 +23,7 @@ export class RateLimiter {
   private limits: Record<Platform, Record<string, number>>;
   private persistPath: string;
 
-  constructor(
-    limits: Record<Platform, Record<string, number>>,
-    persistPath?: string
-  ) {
+  constructor(limits: Record<Platform, Record<string, number>>, persistPath?: string) {
     this.limits = limits;
     this.persistPath = persistPath || './rate-limits.json';
     this.load();
@@ -56,9 +53,10 @@ export class RateLimiter {
 
     const count = this.store[platform][key].length;
     const remaining = Math.max(0, limit - count);
-    const resetAt = this.store[platform][key].length > 0
-      ? this.store[platform][key][0].timestamp + DAY_MS
-      : now + DAY_MS;
+    const resetAt =
+      this.store[platform][key].length > 0
+        ? this.store[platform][key][0].timestamp + DAY_MS
+        : now + DAY_MS;
 
     const status: RateLimitStatus = {
       remaining,
@@ -119,9 +117,7 @@ export class RateLimiter {
       return limit;
     }
 
-    const count = this.store[platform][key].filter(
-      (record) => record.timestamp > dayAgo
-    ).length;
+    const count = this.store[platform][key].filter((record) => record.timestamp > dayAgo).length;
 
     return Math.max(0, limit - count);
   }
@@ -137,9 +133,8 @@ export class RateLimiter {
     const platformLimits = this.limits[platform] || {};
 
     for (const [key, limit] of Object.entries(platformLimits)) {
-      const actions = this.store[platform]?.[key]?.filter(
-        (record) => record.timestamp > dayAgo
-      ) || [];
+      const actions =
+        this.store[platform]?.[key]?.filter((record) => record.timestamp > dayAgo) || [];
 
       const count = actions.length;
       const remaining = Math.max(0, limit - count);
@@ -235,5 +230,12 @@ export const DEFAULT_RATE_LIMITS: Record<Platform, Record<string, number>> = {
     follow: 15,
     dm: 40,
     post: 5,
+  },
+  facebook: {
+    like: 100,
+    comment: 30,
+    follow: 20,
+    dm: 30,
+    post: 10,
   },
 };

@@ -4,7 +4,7 @@ import type { Page, BrowserContext } from 'playwright';
 // Platform Types
 // ============================================================================
 
-export type Platform = 'instagram' | 'twitter' | 'linkedin';
+export type Platform = 'instagram' | 'twitter' | 'linkedin' | 'facebook';
 
 export type ActionType =
   | 'like'
@@ -56,6 +56,7 @@ export interface RateLimitConfig {
   instagram: PlatformRateLimits;
   twitter: PlatformRateLimits;
   linkedin: PlatformRateLimits;
+  facebook: PlatformRateLimits;
 }
 
 export interface PlatformRateLimits {
@@ -90,7 +91,7 @@ export interface LoggingConfig {
 
 export type NotificationChannel = 'telegram' | 'discord' | 'webhook';
 
-export type NotificationEvent = 
+export type NotificationEvent =
   | 'action:complete'
   | 'action:error'
   | 'session:login'

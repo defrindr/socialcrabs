@@ -1,10 +1,17 @@
 import { randomBytes, randomUUID } from 'node:crypto';
-import { TWITTER_API_BASE, QUERY_IDS, SETTINGS_SCREEN_NAME_REGEX, SETTINGS_USER_ID_REGEX, SETTINGS_NAME_REGEX } from './constants.js';
+import {
+  TWITTER_API_BASE,
+  QUERY_IDS,
+  SETTINGS_SCREEN_NAME_REGEX,
+  SETTINGS_USER_ID_REGEX,
+  SETTINGS_NAME_REGEX,
+} from './constants.js';
 import { buildSearchFeatures, buildHomeTimelineFeatures } from './features.js';
 import { parseTweetsFromInstructions, extractCursorFromInstructions } from './utils.js';
 import type { Tweet, XClientOptions, SearchResult, UserResult } from './types.js';
 
-const BEARER_TOKEN = 'Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA';
+const BEARER_TOKEN =
+  'Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA';
 
 export class XGraphQLClient {
   private authToken: string;
@@ -23,7 +30,9 @@ export class XGraphQLClient {
     this.authToken = options.authToken;
     this.ct0 = options.ct0;
     this.cookieHeader = options.cookieHeader || `auth_token=${this.authToken}; ct0=${this.ct0}`;
-    this.userAgent = options.userAgent || 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
+    this.userAgent =
+      options.userAgent ||
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
     this.timeoutMs = options.timeoutMs;
     this.quoteDepth = options.quoteDepth ?? 1;
     this.clientUuid = randomUUID();
@@ -66,7 +75,14 @@ export class XGraphQLClient {
   }
 
   private getSearchQueryIds(): string[] {
-    return [...new Set([this.getQueryId('SearchTimeline'), 'M1jEez78PEfVfbQLvlWMvQ', '5h0kNbk3ii97rmfY6CdgAA', '6AAys3t42mosm_yTI_QENg'])];
+    return [
+      ...new Set([
+        this.getQueryId('SearchTimeline'),
+        'M1jEez78PEfVfbQLvlWMvQ',
+        '5h0kNbk3ii97rmfY6CdgAA',
+        '6AAys3t42mosm_yTI_QENg',
+      ]),
+    ];
   }
 
   private getHomeQueryIds(): string[] {
@@ -100,7 +116,10 @@ export class XGraphQLClient {
           body: JSON.stringify({ features, queryId }),
         });
 
-        if (response.status === 404) { lastSearchError = `404 for queryId ${queryId}`; continue; }
+        if (response.status === 404) {
+          lastSearchError = `404 for queryId ${queryId}`;
+          continue;
+        }
         if (!response.ok) {
           const text = await response.text();
           lastSearchError = `HTTP ${response.status} (queryId ${queryId}): ${text.slice(0, 300)}`;
@@ -109,15 +128,17 @@ export class XGraphQLClient {
           return { success: false, tweets: [], error: lastSearchError };
         }
 
-        const data = await response.json() as any;
+        const data = (await response.json()) as any;
         if (data.errors?.length > 0) {
           lastSearchError = data.errors.map((e: any) => e.message).join(', ');
           // GRAPHQL_VALIDATION_FAILED = stale queryId, try next
-          if (data.errors.some((e: any) => e?.extensions?.code === 'GRAPHQL_VALIDATION_FAILED')) continue;
+          if (data.errors.some((e: any) => e?.extensions?.code === 'GRAPHQL_VALIDATION_FAILED'))
+            continue;
           return { success: false, tweets: [], error: lastSearchError };
         }
 
-        const instructions = data.data?.search_by_raw_query?.search_timeline?.timeline?.instructions;
+        const instructions =
+          data.data?.search_by_raw_query?.search_timeline?.timeline?.instructions;
         const tweets = parseTweetsFromInstructions(instructions, this.quoteDepth);
         const nextCursor = extractCursorFromInstructions(instructions);
         return { success: true, tweets, nextCursor };
@@ -159,12 +180,20 @@ export class XGraphQLClient {
         if (response.status === 404) continue;
         if (!response.ok) {
           const text = await response.text();
-          return { success: false, tweets: [], error: `HTTP ${response.status}: ${text.slice(0, 200)}` };
+          return {
+            success: false,
+            tweets: [],
+            error: `HTTP ${response.status}: ${text.slice(0, 200)}`,
+          };
         }
 
-        const data = await response.json() as any;
+        const data = (await response.json()) as any;
         if (data.errors?.length > 0) {
-          return { success: false, tweets: [], error: data.errors.map((e: any) => e.message).join(', ') };
+          return {
+            success: false,
+            tweets: [],
+            error: data.errors.map((e: any) => e.message).join(', '),
+          };
         }
 
         const instructions = data.data?.home?.home_timeline_urt?.instructions;
@@ -200,10 +229,14 @@ export class XGraphQLClient {
           continue;
         }
 
-        const data = await response.json() as any;
+        const data = (await response.json()) as any;
         const username = data?.screen_name ?? data?.user?.screen_name;
         const name = data?.name ?? data?.user?.name ?? username ?? '';
-        const userId = data?.user_id?.toString() ?? data?.user_id_str ?? data?.user?.id_str ?? data?.user?.id?.toString();
+        const userId =
+          data?.user_id?.toString() ??
+          data?.user_id_str ??
+          data?.user?.id_str ??
+          data?.user?.id?.toString();
 
         if (username && userId) {
           this.clientUserId = userId;
@@ -244,7 +277,9 @@ export class XGraphQLClient {
   /**
    * Get tweet detail by ID
    */
-  async getTweetDetail(tweetId: string): Promise<{ success: boolean; tweet?: Tweet; error?: string }> {
+  async getTweetDetail(
+    tweetId: string
+  ): Promise<{ success: boolean; tweet?: Tweet; error?: string }> {
     const queryId = this.getQueryId('TweetDetail');
     const features = buildSearchFeatures();
     const variables = {
@@ -272,11 +307,13 @@ export class XGraphQLClient {
         const text = await response.text();
         return { success: false, error: `HTTP ${response.status}: ${text.slice(0, 200)}` };
       }
-      const data = await response.json() as any;
+      const data = (await response.json()) as any;
       const instructions = data.data?.threaded_conversation_with_injections_v2?.instructions;
       const tweets = parseTweetsFromInstructions(instructions ?? [], this.quoteDepth);
-      const tweet = tweets.find(t => t.id === tweetId);
-      return tweet ? { success: true, tweet } : { success: false, error: 'Tweet not found in response' };
+      const tweet = tweets.find((t) => t.id === tweetId);
+      return tweet
+        ? { success: true, tweet }
+        : { success: false, error: 'Tweet not found in response' };
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
@@ -301,7 +338,9 @@ export function createClientFromEnv(): XGraphQLClient {
   const authToken = process.env.AUTH_TOKEN || process.env.SOCIALCRABS_AUTH_TOKEN || '';
   const ct0 = process.env.CT0 || process.env.SOCIALCRABS_CT0 || '';
   if (!authToken || !ct0) {
-    throw new Error('AUTH_TOKEN and CT0 environment variables are required. Set them in .env or pass --auth-token and --ct0.');
+    throw new Error(
+      'AUTH_TOKEN and CT0 environment variables are required. Set them in .env or pass --auth-token and --ct0.'
+    );
   }
   return new XGraphQLClient({ authToken, ct0, timeoutMs: 30000 });
 }

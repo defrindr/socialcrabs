@@ -14,22 +14,26 @@ ClawSocial uses an **agent-driven approach** for comments:
 4. **Comment is logged** to prevent repetition
 
 ### VOICE.md Example
+
 ```markdown
 # VOICE.md — Comment Style Guide
 
 ## Core Rules
+
 - **8th grade reading level** — simple words, short sentences
 - **Max 2 sentences** — most comments should be 1 sentence
 - **10-25 words** — if it's longer, cut it
 - **Ask questions** — engage, don't lecture
 
 ## ✅ DO — Real Examples
+
 "15x performance improvement is wild. What's your content strategy?"
 "Spot on analogy 💯"
 "That's exactly it."
 "Smart move. Context switching between AIs is painful."
 
 ## ❌ DON'T — AI Patterns to Avoid
+
 "Fascinating approach!"
 "Excellent analysis!"
 "Love this systematic approach!"
@@ -59,6 +63,7 @@ _ClawSocial X/Twitter Automation_
 ```
 
 ### Fields Required:
+
 - `author` — Username without @
 - `preview` — First 80 chars of the original tweet
 - `reply` — Your contextual reply text (NOT a template)
@@ -83,6 +88,7 @@ _ClawSocial X/Twitter Automation_
 ```
 
 ### Fields Required:
+
 - `username` — Target username
 - `profileUrl` — Full profile URL
 - `followers` — Follower count (will be formatted)
@@ -110,6 +116,7 @@ _ClawSocial LinkedIn Automation_
 ```
 
 ### Fields Required:
+
 - `title` — Title of the article
 - `author` — Author name (if known)
 - `url` — Full article URL
@@ -134,6 +141,7 @@ _ClawSocial LinkedIn Automation_
 ```
 
 ### Fields Required:
+
 - `username` — Profile username/name
 - `profileUrl` — Full profile URL
 - `degree` — Connection degree
@@ -160,6 +168,7 @@ _ClawSocial Instagram Automation_
 ```
 
 ### Fields Required:
+
 - `author` — Target username with @
 - `postUrl` — Post URL or "N/A"
 - `comment` — Your contextual comment (NOT a template)
@@ -186,6 +195,7 @@ _ClawSocial [Platform] Automation_
 ## Comment Quality Examples
 
 ### ❌ BAD (Generic Templates)
+
 ```
 "This is fire! 🔥"
 "Love this! ❤️"
@@ -195,6 +205,7 @@ _ClawSocial [Platform] Automation_
 ```
 
 ### ✅ GOOD (Contextual, Dynamic)
+
 ```
 "That 15x improvement is wild. What's your caching strategy?"
 "Spot on. The config drift problem is real."
@@ -204,13 +215,14 @@ _ClawSocial [Platform] Automation_
 ```
 
 ### Key Differences:
-| Bad | Good |
-|-----|------|
-| Generic praise | References specific content |
-| Any post fits | Only fits THIS post |
-| Template-able | Unique each time |
-| No questions | Often asks follow-up |
-| Always positive | Sometimes skeptical |
+
+| Bad             | Good                        |
+| --------------- | --------------------------- |
+| Generic praise  | References specific content |
+| Any post fits   | Only fits THIS post         |
+| Template-able   | Unique each time            |
+| No questions    | Often asks follow-up        |
+| Always positive | Sometimes skeptical         |
 
 ---
 
@@ -230,6 +242,7 @@ _ClawSocial [Platform] Automation_
 ## CLI Usage
 
 Pass context as JSON:
+
 ```bash
 npm run cli -- notify report twitter engagement <url> --context='{"author":"username","preview":"First 80 chars...","reply":"Your contextual reply","language":"EN","behaviors":"Home feed viewed"}'
 ```
@@ -248,6 +261,7 @@ echo "$(date +%Y-%m-%d\ %H:%M) | @username | Your comment text" >> ~/clawd/x-com
 ```
 
 **Format:**
+
 ```
 # ~/clawd/x-comments.txt
 2026-02-06 15:30 | @user1 | That's wild. What stack?

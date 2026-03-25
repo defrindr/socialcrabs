@@ -1,11 +1,11 @@
 #!/usr/bin/env npx tsx
 /**
  * Remote Browser - View and control browser from your machine
- * 
+ *
  * Usage:
  *   npx tsx scripts/remote-browser.ts
  *   npx tsx scripts/remote-browser.ts "https://instagram.com/p/xxx"
- * 
+ *
  * Then connect:
  *   1. SSH tunnel: ssh -L 9222:localhost:9222 your-server
  *   2. Chrome: chrome://inspect → Configure → localhost:9222
@@ -31,20 +31,18 @@ async function main() {
 
   const browser = await chromium.launch({
     headless: true,
-    args: [
-      '--remote-debugging-port=9222',
-      '--remote-debugging-address=0.0.0.0',
-    ]
+    args: ['--remote-debugging-port=9222', '--remote-debugging-address=0.0.0.0'],
   });
 
   const context = await browser.newContext({
     viewport: { width: 1280, height: 800 },
-    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    userAgent:
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
   });
 
   const page = await context.newPage();
   await page.goto(url);
-  
+
   console.log('✅ Browser ready! Waiting for connection...');
   console.log(`   Debug URL: http://localhost:9222`);
 

@@ -155,7 +155,9 @@ export class BrowserManager {
     try {
       await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
     } catch (error) {
-      log.warn(`Navigation timeout/error for ${url}, retrying with networkidle...`, { error: String(error) });
+      log.warn(`Navigation timeout/error for ${url}, retrying with networkidle...`, {
+        error: String(error),
+      });
       // Try again with longer timeout and different wait strategy
       await page.goto(url, { waitUntil: 'commit', timeout: 30000 });
     }
@@ -191,7 +193,9 @@ export class BrowserManager {
     };
     const requiredCookie = criticalCookies[platform];
     if (requiredCookie && !cookies.some((c) => c.name === requiredCookie && c.value)) {
-      log.warn(`Skipping session save for ${platform} — missing ${requiredCookie} cookie (logged out)`);
+      log.warn(
+        `Skipping session save for ${platform} — missing ${requiredCookie} cookie (logged out)`
+      );
       return;
     }
 
@@ -222,15 +226,12 @@ export class BrowserManager {
   /**
    * Restore session for a platform
    */
-  private async restoreSession(
-    platform: Platform,
-    context: BrowserContext
-  ): Promise<boolean> {
+  private async restoreSession(platform: Platform, context: BrowserContext): Promise<boolean> {
     const sessionPath = path.join(this.sessionDir, `${platform}.json`);
 
     if (!fs.existsSync(sessionPath)) {
       log.debug(`No session found for ${platform}`);
-      
+
       // Try to create session from environment variables (Twitter only)
       if (platform === 'twitter') {
         return await this.createSessionFromEnv(platform, context);
@@ -292,7 +293,7 @@ export class BrowserManager {
     log.info(`Creating session from environment variables for ${platform}`);
 
     const now = Date.now();
-    const futureExpiry = Math.floor(now / 1000) + (180 * 24 * 60 * 60); // ~180 days from now
+    const futureExpiry = Math.floor(now / 1000) + 180 * 24 * 60 * 60; // ~180 days from now
 
     const cookies = [
       {

@@ -16,37 +16,42 @@ import type {
 const SELECTORS = {
   // Login - multiple selectors for different login page variants
   loginUsername: '#username, input[name="session_key"], input[autocomplete="username"]',
-  loginPassword: '#password, input[name="session_password"], input[autocomplete="current-password"]',
+  loginPassword:
+    '#password, input[name="session_password"], input[autocomplete="current-password"]',
   loginButton: 'button[type="submit"], button:has-text("Sign in")',
-  
+
   // Logged in indicators
   navMe: 'button[aria-label*="me"]',
   globalNav: 'nav.global-nav',
   feedSort: 'button[aria-label*="sort"]',
-  
+
   // Post actions
   likeButton: 'button[aria-label*="Like"], span.react-button__text',
   unlikeButton: 'button[aria-pressed="true"][aria-label*="React"]',
   commentButton: 'button[aria-label*="Comment"]',
   commentInput: 'div.ql-editor[data-placeholder*="Add a comment"], div[contenteditable="true"]',
-  commentSubmit: 'button.comments-comment-box__submit-button, button[data-control-name="comment_submit"], form.comments-comment-box button[type="submit"], button.artdeco-button--primary:near(div.ql-editor)',
-  
+  commentSubmit:
+    'button.comments-comment-box__submit-button, button[data-control-name="comment_submit"], form.comments-comment-box button[type="submit"], button.artdeco-button--primary:near(div.ql-editor)',
+
   // Profile actions (case-insensitive matching)
-  connectButton: 'button[aria-label*="connect"], button[aria-label*="Connect"], button:has-text("Connect"):not([aria-label*="Invite"])',
+  connectButton:
+    'button[aria-label*="connect"], button[aria-label*="Connect"], button:has-text("Connect"):not([aria-label*="Invite"])',
   pendingButton: 'button[aria-label*="Pending"], button[aria-label*="pending"]',
-  followButton: 'button[aria-label*="Follow"]:not([aria-label*="Following"]), button:has-text("Follow"):not(:has-text("Following"))',
+  followButton:
+    'button[aria-label*="Follow"]:not([aria-label*="Following"]), button:has-text("Follow"):not(:has-text("Following"))',
   followingButton: 'button[aria-label*="Following"]',
-  messageButton: 'button.artdeco-button--primary[aria-label^="Message "]:visible, button[aria-label*="Message"]:visible',
-  
+  messageButton:
+    'button.artdeco-button--primary[aria-label^="Message "]:visible, button[aria-label*="Message"]:visible',
+
   // Connection modal
   addNoteButton: 'button[aria-label*="Add a note"]',
   noteInput: 'textarea[name="message"]',
   sendButton: 'button[aria-label*="Send"]',
-  
+
   // DM
   messageInput: 'div.msg-form__contenteditable',
   messageSend: 'button.msg-form__send-button',
-  
+
   // Profile data
   profileName: 'h1.text-heading-xlarge',
   profileHeadline: 'div.text-body-medium',
@@ -69,19 +74,23 @@ export class LinkedInHandler extends BasePlatformHandler {
   async isLoggedIn(): Promise<boolean> {
     try {
       const page = await this.getPage();
-      
+
       // Primary check: li_at cookie (LinkedIn auth token)
       const cookies = await page.context().cookies();
-      const hasAuthCookie = cookies.some(c => c.name === 'li_at');
+      const hasAuthCookie = cookies.some((c) => c.name === 'li_at');
       if (hasAuthCookie) {
         log.debug('LinkedIn li_at auth cookie found');
         return true;
       }
-      
+
       // Check current URL - must be on feed AND not showing login form
       const url = page.url();
-      const isOnLoggedInPage = url.includes('/feed') || url.includes('/mynetwork') || url.includes('/messaging') || url.includes('/in/');
-      
+      const isOnLoggedInPage =
+        url.includes('/feed') ||
+        url.includes('/mynetwork') ||
+        url.includes('/messaging') ||
+        url.includes('/in/');
+
       if (isOnLoggedInPage) {
         // Make sure we're not seeing a login prompt
         const hasLoginForm = await this.elementExists('#username, input[name="session_key"]');
@@ -90,7 +99,7 @@ export class LinkedInHandler extends BasePlatformHandler {
           return true;
         }
       }
-      
+
       return false;
     } catch (error) {
       log.error('Error checking LinkedIn login status', { error: String(error) });
@@ -104,7 +113,7 @@ export class LinkedInHandler extends BasePlatformHandler {
   async login(): Promise<boolean> {
     try {
       log.info('Starting LinkedIn login...');
-      
+
       await this.navigate(`${this.baseUrl}/login`);
       await this.delay();
 
@@ -148,7 +157,7 @@ export class LinkedInHandler extends BasePlatformHandler {
   async loginWithCredentials(username: string, password: string): Promise<boolean> {
     try {
       log.info('Starting LinkedIn headless login...');
-      
+
       await this.navigate(`${this.baseUrl}/login`);
       await this.delay();
 
@@ -158,13 +167,17 @@ export class LinkedInHandler extends BasePlatformHandler {
       }
 
       const page = await this.getPage();
-      
+
       // Take debug screenshot of login page
       await page.screenshot({ path: './sessions/debug-linkedin-form.png' });
       log.info('Login form screenshot saved');
-      
+
       // Try multiple username field selectors
-      const usernameSelectors = ['#username', 'input[name="session_key"]', 'input[autocomplete="username"]'];
+      const usernameSelectors = [
+        '#username',
+        'input[name="session_key"]',
+        'input[autocomplete="username"]',
+      ];
       let usernameField = null;
       for (const sel of usernameSelectors) {
         if (await this.elementExists(sel)) {
@@ -173,7 +186,7 @@ export class LinkedInHandler extends BasePlatformHandler {
           break;
         }
       }
-      
+
       if (!usernameField) {
         log.error('Login form not found - no username field');
         return false;
@@ -185,7 +198,11 @@ export class LinkedInHandler extends BasePlatformHandler {
       await this.pause();
 
       // Try multiple password field selectors
-      const passwordSelectors = ['#password', 'input[name="session_password"]', 'input[type="password"]'];
+      const passwordSelectors = [
+        '#password',
+        'input[name="session_password"]',
+        'input[type="password"]',
+      ];
       let passwordField = null;
       for (const sel of passwordSelectors) {
         if (await this.elementExists(sel)) {
@@ -194,7 +211,7 @@ export class LinkedInHandler extends BasePlatformHandler {
           break;
         }
       }
-      
+
       if (!passwordField) {
         log.error('Password field not found');
         return false;
@@ -233,7 +250,7 @@ export class LinkedInHandler extends BasePlatformHandler {
         'div:has-text("verify it")',
         'button:has-text("Verify")',
       ];
-      
+
       let mfaDetected = false;
       for (const sel of mfaSelectors) {
         if (await this.elementExists(sel)) {
@@ -241,9 +258,11 @@ export class LinkedInHandler extends BasePlatformHandler {
           break;
         }
       }
-      
+
       if (mfaDetected) {
-        log.info('🔐 MFA/Verification detected - please approve in your LinkedIn app or enter code');
+        log.info(
+          '🔐 MFA/Verification detected - please approve in your LinkedIn app or enter code'
+        );
         await page.screenshot({ path: './sessions/debug-linkedin-mfa.png' });
         log.info('MFA screenshot saved to ./sessions/debug-linkedin-mfa.png');
       }
@@ -258,12 +277,14 @@ export class LinkedInHandler extends BasePlatformHandler {
           await this.browserManager.saveSession('linkedin');
           return true;
         }
-        
+
         // Periodic status update
         if ((Date.now() - startTime) % 15000 < 1000) {
-          log.info('Waiting for login/MFA approval...', { elapsed: Math.round((Date.now() - startTime) / 1000) });
+          log.info('Waiting for login/MFA approval...', {
+            elapsed: Math.round((Date.now() - startTime) / 1000),
+          });
         }
-        
+
         await new Promise((resolve) => setTimeout(resolve, 1000));
       }
 
@@ -320,7 +341,13 @@ export class LinkedInHandler extends BasePlatformHandler {
       }
 
       if (!(await this.elementExists(SELECTORS.likeButton))) {
-        return this.createErrorResult('like', payload.url, 'Like button not found', startTime, status);
+        return this.createErrorResult(
+          'like',
+          payload.url,
+          'Like button not found',
+          startTime,
+          status
+        );
       }
 
       await this.clickHuman(SELECTORS.likeButton);
@@ -346,7 +373,13 @@ export class LinkedInHandler extends BasePlatformHandler {
     const { allowed, status } = await this.checkAndRecordAction('comment');
 
     if (!allowed) {
-      return this.createErrorResult('comment', payload.url, 'Rate limit exceeded', startTime, status);
+      return this.createErrorResult(
+        'comment',
+        payload.url,
+        'Rate limit exceeded',
+        startTime,
+        status
+      );
     }
 
     try {
@@ -368,13 +401,19 @@ export class LinkedInHandler extends BasePlatformHandler {
 
       // Wait for comment input
       if (!(await this.waitForElement(SELECTORS.commentInput, 10000))) {
-        return this.createErrorResult('comment', payload.url, 'Comment input not found', startTime, status);
+        return this.createErrorResult(
+          'comment',
+          payload.url,
+          'Comment input not found',
+          startTime,
+          status
+        );
       }
 
       // Sanitize and type comment
       const sanitizedText = this.sanitizeText(payload.text);
       await this.clickHuman(SELECTORS.commentInput);
-      
+
       const page = await this.getPage();
       await page.keyboard.type(sanitizedText, { delay: 50 });
       await this.pause();
@@ -394,14 +433,20 @@ export class LinkedInHandler extends BasePlatformHandler {
       await this.delay();
       const pageContent = await page.content();
       const commentLanded = pageContent.includes(sanitizedText.substring(0, 30));
-      
+
       if (!commentLanded) {
         log.error('Comment text not found on page after submit — comment likely did NOT post');
-        return this.createErrorResult('comment', payload.url, 'Comment submit failed — text not found on page after submit', startTime, status);
+        return this.createErrorResult(
+          'comment',
+          payload.url,
+          'Comment submit failed — text not found on page after submit',
+          startTime,
+          status
+        );
       }
 
       await this.recordAction('comment');
-      
+
       log.info('Successfully commented on LinkedIn post (verified on page)');
       return this.createResult('comment', payload.url, startTime, status, {
         postUrl: payload.url,
@@ -422,7 +467,13 @@ export class LinkedInHandler extends BasePlatformHandler {
     const { allowed, status } = await this.checkAndRecordAction('follow');
 
     if (!allowed) {
-      return this.createErrorResult('follow', payload.username, 'Rate limit exceeded', startTime, status);
+      return this.createErrorResult(
+        'follow',
+        payload.username,
+        'Rate limit exceeded',
+        startTime,
+        status
+      );
     }
 
     try {
@@ -431,7 +482,7 @@ export class LinkedInHandler extends BasePlatformHandler {
       const profileUrl = payload.username.startsWith('http')
         ? payload.username
         : `${this.baseUrl}/in/${payload.username}/`;
-      
+
       await this.navigate(profileUrl);
       await this.think();
 
@@ -439,13 +490,21 @@ export class LinkedInHandler extends BasePlatformHandler {
       if (await this.elementExists(SELECTORS.followingButton)) {
         log.info('Already following user');
         return this.createResult('follow', payload.username, startTime, status, {
-          profileUrl: payload.username.startsWith('http') ? payload.username : `https://linkedin.com/in/${payload.username}`,
+          profileUrl: payload.username.startsWith('http')
+            ? payload.username
+            : `https://linkedin.com/in/${payload.username}`,
           actions: ['👥 Already Following'],
         });
       }
 
       if (!(await this.elementExists(SELECTORS.followButton))) {
-        return this.createErrorResult('follow', payload.username, 'Follow button not found', startTime, status);
+        return this.createErrorResult(
+          'follow',
+          payload.username,
+          'Follow button not found',
+          startTime,
+          status
+        );
       }
 
       await this.clickHuman(SELECTORS.followButton);
@@ -454,7 +513,9 @@ export class LinkedInHandler extends BasePlatformHandler {
       await this.recordAction('follow');
       log.info('Successfully followed LinkedIn user');
       return this.createResult('follow', payload.username, startTime, status, {
-        profileUrl: payload.username.startsWith('http') ? payload.username : `https://linkedin.com/in/${payload.username}`,
+        profileUrl: payload.username.startsWith('http')
+          ? payload.username
+          : `https://linkedin.com/in/${payload.username}`,
         actions: ['👥 Followed'],
       });
     } catch (error) {
@@ -471,7 +532,13 @@ export class LinkedInHandler extends BasePlatformHandler {
     const { allowed, status } = await this.checkAndRecordAction('follow');
 
     if (!allowed) {
-      return this.createErrorResult('unfollow', payload.username, 'Rate limit exceeded', startTime, status);
+      return this.createErrorResult(
+        'unfollow',
+        payload.username,
+        'Rate limit exceeded',
+        startTime,
+        status
+      );
     }
 
     try {
@@ -480,7 +547,7 @@ export class LinkedInHandler extends BasePlatformHandler {
       const profileUrl = payload.username.startsWith('http')
         ? payload.username
         : `${this.baseUrl}/in/${payload.username}/`;
-      
+
       await this.navigate(profileUrl);
       await this.think();
 
@@ -509,7 +576,13 @@ export class LinkedInHandler extends BasePlatformHandler {
     const { allowed, status } = await this.checkAndRecordAction('follow'); // Connect counts against follow limit
 
     if (!allowed) {
-      return this.createErrorResult('connect', payload.profileUrl, 'Rate limit exceeded', startTime, status);
+      return this.createErrorResult(
+        'connect',
+        payload.profileUrl,
+        'Rate limit exceeded',
+        startTime,
+        status
+      );
     }
 
     try {
@@ -519,7 +592,7 @@ export class LinkedInHandler extends BasePlatformHandler {
       await this.think();
 
       const page = await this.getPage();
-      
+
       // FIRST: Wait for profile to fully load before any button detection
       // Use a retry loop because Playwright locators can be slow to detect new elements
       let profileLoaded = false;
@@ -532,37 +605,43 @@ export class LinkedInHandler extends BasePlatformHandler {
           log.info('Profile header loaded', { attempt: attempt + 1, messageCount, moreCount });
         }
       }
-      
+
       if (!profileLoaded) {
         log.warn('Profile header not detected after 10 attempts');
         await page.screenshot({ path: '/tmp/linkedin-connect-debug.png' });
         const currentUrl = page.url();
         log.info('Debug info', { url: currentUrl, screenshot: '/tmp/linkedin-connect-debug.png' });
         if (currentUrl.includes('/login') || currentUrl.includes('/authwall')) {
-          return this.createErrorResult('connect', payload.profileUrl, 'Not logged in - session may have expired', startTime, status);
+          return this.createErrorResult(
+            'connect',
+            payload.profileUrl,
+            'Not logged in - session may have expired',
+            startTime,
+            status
+          );
         }
       }
       await page.waitForTimeout(500); // Small buffer after detection
 
       // Check for Connect button (LinkedIn shows Message for 2nd degree too)
       // Look for main profile Connect button (not sidebar suggestions)
-      
+
       // Find Connect buttons and check if any are for the main profile (must be visible)
       const connectButtons = await page.locator('button:has-text("Connect")').all();
       let mainConnectButton = null;
-      
+
       for (const btn of connectButtons) {
         try {
           // Check if button is visible
           const isVisible = await btn.isVisible();
           if (!isVisible) continue;
-          
+
           const ariaLabel = await btn.getAttribute('aria-label');
           const classes = await btn.getAttribute('class');
-          
+
           // Skip sticky header buttons
           if (classes?.includes('sticky-header')) continue;
-          
+
           // Main profile Connect doesn't have "Invite X to connect" - sidebar suggestions do
           if (!ariaLabel || !ariaLabel.toLowerCase().includes('invite')) {
             mainConnectButton = btn;
@@ -572,25 +651,31 @@ export class LinkedInHandler extends BasePlatformHandler {
           // Skip problematic buttons
         }
       }
-      
+
       // Also check for Follow button on main profile (must be visible, not sticky header)
-      const followButtons = await page.locator('button:has-text("Follow"):not(:has-text("Following"))').all();
+      const followButtons = await page
+        .locator('button:has-text("Follow"):not(:has-text("Following"))')
+        .all();
       let mainFollowButton = null;
-      
+
       for (const btn of followButtons) {
         try {
           // Check if button is visible
           const isVisible = await btn.isVisible();
           if (!isVisible) continue;
-          
+
           const ariaLabel = await btn.getAttribute('aria-label');
           const classes = await btn.getAttribute('class');
-          
+
           // Skip sticky header buttons
           if (classes?.includes('sticky-header')) continue;
-          
+
           // Main profile Follow usually has the person's name
-          if (ariaLabel && ariaLabel.toLowerCase().includes('follow') && !ariaLabel.toLowerCase().includes('unfollow')) {
+          if (
+            ariaLabel &&
+            ariaLabel.toLowerCase().includes('follow') &&
+            !ariaLabel.toLowerCase().includes('unfollow')
+          ) {
             mainFollowButton = btn;
             break;
           }
@@ -598,26 +683,26 @@ export class LinkedInHandler extends BasePlatformHandler {
           // Skip problematic buttons
         }
       }
-      
+
       const hasMainConnectButton = mainConnectButton !== null;
       const hasMainFollowButton = mainFollowButton !== null;
-      
+
       log.info('Button detection', { hasMainConnectButton, hasMainFollowButton });
 
       // Check for "More" button (for 3rd degree connections where Connect is hidden in dropdown)
       // Iterate through all More buttons to find a visible main profile one
       const moreButtons = await page.locator('button[aria-label="More actions"]').all();
       let moreButton = null;
-      
+
       for (const btn of moreButtons) {
         try {
           const isVisible = await btn.isVisible();
           if (!isVisible) continue;
-          
+
           const classes = await btn.getAttribute('class');
           // Skip sticky header buttons
           if (classes?.includes('sticky-header')) continue;
-          
+
           moreButton = btn;
           log.debug('Found visible More button');
           break;
@@ -625,7 +710,7 @@ export class LinkedInHandler extends BasePlatformHandler {
           // Skip problematic buttons
         }
       }
-      
+
       const hasMoreButton = moreButton !== null;
       log.info('More button detection', { hasMoreButton, totalMoreButtons: moreButtons.length });
 
@@ -635,32 +720,39 @@ export class LinkedInHandler extends BasePlatformHandler {
       } else if (hasMoreButton && moreButton) {
         // For 3rd degree connections: Connect is hidden in "More" dropdown
         log.info('No direct Connect button, checking More dropdown...');
-        
+
         // Click More to reveal dropdown
         await moreButton.click();
         await this.pause();
-        
+
         // Look for Connect in the dropdown
-        const dropdownConnect = page.locator('.artdeco-dropdown__content:visible').locator('div:has-text("Connect"), span:has-text("Connect")').first();
+        const dropdownConnect = page
+          .locator('.artdeco-dropdown__content:visible')
+          .locator('div:has-text("Connect"), span:has-text("Connect")')
+          .first();
         const hasDropdownConnect = await dropdownConnect.isVisible().catch(() => false);
-        
+
         if (hasDropdownConnect) {
           log.info('Found Connect in More dropdown - clicking...');
           await dropdownConnect.click();
           await this.pause();
-          
+
           // Handle "How do you know..." modal or send without note
           // First check for "Send without a note" / "Send now" confirmation dialog
-          const sendWithoutNoteBtn = page.locator('button[aria-label*="Send without"], button[aria-label*="Send now"], button:has-text("Send without a note"), button:has-text("Send now")').first();
+          const sendWithoutNoteBtn = page
+            .locator(
+              'button[aria-label*="Send without"], button[aria-label*="Send now"], button:has-text("Send without a note"), button:has-text("Send now")'
+            )
+            .first();
           const hasSendWithoutNote = await sendWithoutNoteBtn.isVisible().catch(() => false);
-          
+
           if (hasSendWithoutNote) {
             log.info('Found "Send without note" confirmation - clicking...');
             await sendWithoutNoteBtn.click();
             await this.pause();
           } else {
             // Handle connection modal (add note if provided)
-            if (payload.note && await this.elementExists(SELECTORS.addNoteButton)) {
+            if (payload.note && (await this.elementExists(SELECTORS.addNoteButton))) {
               await this.clickHuman(SELECTORS.addNoteButton);
               await this.pause();
               if (await this.waitForElement(SELECTORS.noteInput, 5000)) {
@@ -668,16 +760,22 @@ export class LinkedInHandler extends BasePlatformHandler {
                 await this.pause();
               }
             }
-            
+
             // Send connection request - try multiple selectors
-            const sendBtn = page.locator('button[aria-label*="Send"]:visible, button:has-text("Send"):visible').first();
+            const sendBtn = page
+              .locator('button[aria-label*="Send"]:visible, button:has-text("Send"):visible')
+              .first();
             const hasSendBtn = await sendBtn.isVisible().catch(() => false);
             if (hasSendBtn) {
               await sendBtn.click();
               await this.pause();
-              
+
               // Check if another confirmation modal appears after clicking Send
-              const confirmBtn = page.locator('button[aria-label*="Send without"], button[aria-label*="Send now"], button:has-text("Send without a note"), button:has-text("Send now")').first();
+              const confirmBtn = page
+                .locator(
+                  'button[aria-label*="Send without"], button[aria-label*="Send now"], button:has-text("Send without a note"), button:has-text("Send now")'
+                )
+                .first();
               const hasConfirm = await confirmBtn.isVisible().catch(() => false);
               if (hasConfirm) {
                 log.info('Secondary confirmation modal - clicking...');
@@ -686,10 +784,10 @@ export class LinkedInHandler extends BasePlatformHandler {
               }
             }
           }
-          
+
           await this.delay();
           await this.recordAction('follow');
-          
+
           log.info('Successfully sent LinkedIn connection request (via More dropdown)');
           return this.createResult('connect', payload.profileUrl, startTime, status, {
             profileUrl: payload.profileUrl,
@@ -710,7 +808,7 @@ export class LinkedInHandler extends BasePlatformHandler {
             actions: ['⏳ Already Pending'],
           });
         }
-        
+
         // Check if already following
         if (await this.elementExists(SELECTORS.followingButton)) {
           log.info('Already following this profile');
@@ -719,7 +817,7 @@ export class LinkedInHandler extends BasePlatformHandler {
             actions: ['👥 Already Following'],
           });
         }
-        
+
         // No Connect, no Pending, no Following - check Message (truly connected)
         if (await this.elementExists(SELECTORS.messageButton)) {
           // Double check no Connect button with different selector
@@ -739,7 +837,13 @@ export class LinkedInHandler extends BasePlatformHandler {
       const hasFollowButton = hasMainFollowButton;
 
       if (!hasConnectButton && !hasFollowButton) {
-        return this.createErrorResult('connect', payload.profileUrl, 'Neither Connect nor Follow button found', startTime, status);
+        return this.createErrorResult(
+          'connect',
+          payload.profileUrl,
+          'Neither Connect nor Follow button found',
+          startTime,
+          status
+        );
       }
 
       if (hasConnectButton && mainConnectButton) {
@@ -749,16 +853,20 @@ export class LinkedInHandler extends BasePlatformHandler {
         await this.pause();
 
         // Handle "Send without a note" confirmation if it appears immediately
-        const sendWithoutNoteBtn = page.locator('button[aria-label*="Send without"], button[aria-label*="Send now"], button:has-text("Send without a note"), button:has-text("Send now")').first();
+        const sendWithoutNoteBtn = page
+          .locator(
+            'button[aria-label*="Send without"], button[aria-label*="Send now"], button:has-text("Send without a note"), button:has-text("Send now")'
+          )
+          .first();
         const hasSendWithoutNote = await sendWithoutNoteBtn.isVisible().catch(() => false);
-        
+
         if (hasSendWithoutNote) {
           log.info('Found "Send without note" confirmation - clicking...');
           await sendWithoutNoteBtn.click();
           await this.pause();
         } else {
           // Add note if provided
-          if (payload.note && await this.elementExists(SELECTORS.addNoteButton)) {
+          if (payload.note && (await this.elementExists(SELECTORS.addNoteButton))) {
             await this.clickHuman(SELECTORS.addNoteButton);
             await this.pause();
 
@@ -769,14 +877,20 @@ export class LinkedInHandler extends BasePlatformHandler {
           }
 
           // Send connection request - try multiple selectors
-          const sendBtn = page.locator('button[aria-label*="Send"]:visible, button:has-text("Send"):visible').first();
+          const sendBtn = page
+            .locator('button[aria-label*="Send"]:visible, button:has-text("Send"):visible')
+            .first();
           const hasSendBtn = await sendBtn.isVisible().catch(() => false);
           if (hasSendBtn) {
             await sendBtn.click();
             await this.pause();
-            
+
             // Check if another confirmation modal appears after clicking Send
-            const confirmBtn = page.locator('button[aria-label*="Send without"], button[aria-label*="Send now"], button:has-text("Send without a note"), button:has-text("Send now")').first();
+            const confirmBtn = page
+              .locator(
+                'button[aria-label*="Send without"], button[aria-label*="Send now"], button:has-text("Send without a note"), button:has-text("Send now")'
+              )
+              .first();
             const hasConfirm = await confirmBtn.isVisible().catch(() => false);
             if (hasConfirm) {
               log.info('Secondary confirmation modal - clicking...');
@@ -788,7 +902,7 @@ export class LinkedInHandler extends BasePlatformHandler {
 
         await this.delay();
         await this.recordAction('follow');
-        
+
         log.info('Successfully sent LinkedIn connection request');
         return this.createResult('connect', payload.profileUrl, startTime, status, {
           profileUrl: payload.profileUrl,
@@ -801,7 +915,7 @@ export class LinkedInHandler extends BasePlatformHandler {
         await mainFollowButton.click();
         await this.delay();
         await this.recordAction('follow');
-        
+
         log.info('Successfully followed LinkedIn profile (Follow-first mode)');
         return this.createResult('follow', payload.profileUrl, startTime, status, {
           profileUrl: payload.profileUrl,
@@ -810,10 +924,22 @@ export class LinkedInHandler extends BasePlatformHandler {
         });
       }
 
-      return this.createErrorResult('connect', payload.profileUrl, 'Could not complete action', startTime, status);
+      return this.createErrorResult(
+        'connect',
+        payload.profileUrl,
+        'Could not complete action',
+        startTime,
+        status
+      );
     } catch (error) {
       log.error('Error sending LinkedIn connection request', { error: String(error) });
-      return this.createErrorResult('connect', payload.profileUrl, String(error), startTime, status);
+      return this.createErrorResult(
+        'connect',
+        payload.profileUrl,
+        String(error),
+        startTime,
+        status
+      );
     }
   }
 
@@ -825,7 +951,13 @@ export class LinkedInHandler extends BasePlatformHandler {
     const { allowed, status } = await this.checkAndRecordAction('dm');
 
     if (!allowed) {
-      return this.createErrorResult('dm', payload.username, 'Rate limit exceeded', startTime, status);
+      return this.createErrorResult(
+        'dm',
+        payload.username,
+        'Rate limit exceeded',
+        startTime,
+        status
+      );
     }
 
     try {
@@ -839,13 +971,19 @@ export class LinkedInHandler extends BasePlatformHandler {
       const profileUrl = payload.username.startsWith('http')
         ? payload.username
         : `${this.baseUrl}/in/${payload.username}/`;
-      
+
       await this.navigate(profileUrl);
       await this.think();
 
       // Click message button
       if (!(await this.waitForElement(SELECTORS.messageButton, 10000))) {
-        return this.createErrorResult('dm', payload.username, 'Message button not found (not connected?)', startTime, status);
+        return this.createErrorResult(
+          'dm',
+          payload.username,
+          'Message button not found (not connected?)',
+          startTime,
+          status
+        );
       }
 
       await this.clickHuman(SELECTORS.messageButton);
@@ -853,12 +991,18 @@ export class LinkedInHandler extends BasePlatformHandler {
 
       // Wait for message input
       if (!(await this.waitForElement(SELECTORS.messageInput, 10000))) {
-        return this.createErrorResult('dm', payload.username, 'Message input not found', startTime, status);
+        return this.createErrorResult(
+          'dm',
+          payload.username,
+          'Message input not found',
+          startTime,
+          status
+        );
       }
 
       // Type message
       await this.clickHuman(SELECTORS.messageInput);
-      
+
       const page = await this.getPage();
       await page.keyboard.type(payload.message, { delay: 50 });
       await this.pause();
@@ -870,10 +1014,12 @@ export class LinkedInHandler extends BasePlatformHandler {
 
       await this.delay();
       await this.recordAction('dm');
-      
+
       log.info('Successfully sent LinkedIn message');
       return this.createResult('dm', payload.username, startTime, status, {
-        profileUrl: payload.username.startsWith('http') ? payload.username : `https://linkedin.com/in/${payload.username}`,
+        profileUrl: payload.username.startsWith('http')
+          ? payload.username
+          : `https://linkedin.com/in/${payload.username}`,
         messagePreview: payload.message,
         actions: ['✉️ Message Sent'],
       });
@@ -890,10 +1036,8 @@ export class LinkedInHandler extends BasePlatformHandler {
     try {
       log.info('Getting LinkedIn profile', { username });
 
-      const profileUrl = username.startsWith('http')
-        ? username
-        : `${this.baseUrl}/in/${username}/`;
-      
+      const profileUrl = username.startsWith('http') ? username : `${this.baseUrl}/in/${username}/`;
+
       await this.navigate(profileUrl);
       await this.think();
 
@@ -944,7 +1088,7 @@ export class LinkedInHandler extends BasePlatformHandler {
 
       const page = await this.getPage();
       const searchUrl = `${this.baseUrl}/search/results/content/?keywords=${encodeURIComponent(query)}&origin=GLOBAL_SEARCH_HEADER&sortBy=%5B%22date_posted%22%5D`;
-      
+
       await this.navigate(searchUrl);
       await this.think();
 
@@ -962,7 +1106,8 @@ export class LinkedInHandler extends BasePlatformHandler {
       const seen = new Set<string>();
 
       // Strategy 1: Match feed/update href links (classic format)
-      const hrefRegex = /href="(https:\/\/www\.linkedin\.com\/feed\/update\/(urn:li:(?:share|ugcPost|activity):[0-9]+)[^"]*)"/g;
+      const hrefRegex =
+        /href="(https:\/\/www\.linkedin\.com\/feed\/update\/(urn:li:(?:share|ugcPost|activity):[0-9]+)[^"]*)"/g;
       let match;
       while ((match = hrefRegex.exec(html)) !== null) {
         const fullUrl = match[1].split('?')[0];

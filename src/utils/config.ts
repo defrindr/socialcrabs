@@ -1,6 +1,14 @@
 import dotenv from 'dotenv';
 import path from 'path';
-import type { ServerConfig, BrowserConfig, RateLimitConfig, DelayConfig, SessionConfig, LoggingConfig, NotificationConfig } from '../types/index.js';
+import type {
+  ServerConfig,
+  BrowserConfig,
+  RateLimitConfig,
+  DelayConfig,
+  SessionConfig,
+  LoggingConfig,
+  NotificationConfig,
+} from '../types/index.js';
 
 interface ResolvedConfig {
   server: ServerConfig;
@@ -76,6 +84,14 @@ export function loadConfig(): ResolvedConfig {
         post: getEnvNumber('RATE_LIMIT_LINKEDIN_POST', 5),
         connect: getEnvNumber('RATE_LIMIT_LINKEDIN_CONNECT', 15),
       },
+      facebook: {
+        like: getEnvNumber('RATE_LIMIT_FACEBOOK_LIKE', 100),
+        comment: getEnvNumber('RATE_LIMIT_FACEBOOK_COMMENT', 30),
+        follow: getEnvNumber('RATE_LIMIT_FACEBOOK_FOLLOW', 20),
+        dm: getEnvNumber('RATE_LIMIT_FACEBOOK_DM', 30),
+        post: getEnvNumber('RATE_LIMIT_FACEBOOK_POST', 10),
+        connect: 0,
+      },
     },
     delays: {
       minMs: getEnvNumber('DELAY_MIN_MS', 1500),
@@ -94,12 +110,13 @@ export function loadConfig(): ResolvedConfig {
     notifications: {
       enabled: getEnvBoolean('NOTIFY_ENABLED', false),
       channels: {
-        telegram: process.env.NOTIFY_TELEGRAM_BOT_TOKEN && process.env.NOTIFY_TELEGRAM_CHAT_ID
-          ? {
-              botToken: process.env.NOTIFY_TELEGRAM_BOT_TOKEN,
-              chatId: process.env.NOTIFY_TELEGRAM_CHAT_ID,
-            }
-          : undefined,
+        telegram:
+          process.env.NOTIFY_TELEGRAM_BOT_TOKEN && process.env.NOTIFY_TELEGRAM_CHAT_ID
+            ? {
+                botToken: process.env.NOTIFY_TELEGRAM_BOT_TOKEN,
+                chatId: process.env.NOTIFY_TELEGRAM_CHAT_ID,
+              }
+            : undefined,
         discord: process.env.NOTIFY_DISCORD_WEBHOOK
           ? {
               webhookUrl: process.env.NOTIFY_DISCORD_WEBHOOK,

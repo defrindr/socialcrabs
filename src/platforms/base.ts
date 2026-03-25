@@ -30,11 +30,7 @@ export abstract class BasePlatformHandler {
   protected rateLimiter: RateLimiter;
   protected page: Page | null = null;
 
-  constructor(
-    platform: Platform,
-    browserManager: BrowserManager,
-    rateLimiter: RateLimiter
-  ) {
+  constructor(platform: Platform, browserManager: BrowserManager, rateLimiter: RateLimiter) {
     this.platform = platform;
     this.browserManager = browserManager;
     this.rateLimiter = rateLimiter;
@@ -93,10 +89,10 @@ export abstract class BasePlatformHandler {
       duration: Date.now() - startTime,
       rateLimit,
     };
-    
+
     // Send notification asynchronously (don't await)
     this.sendNotification('action:complete', result, details);
-    
+
     return result;
   }
 
@@ -120,10 +116,10 @@ export abstract class BasePlatformHandler {
       duration: Date.now() - startTime,
       rateLimit,
     };
-    
+
     // Send notification asynchronously (don't await)
     this.sendNotification('action:error', result);
-    
+
     return result;
   }
 
@@ -141,11 +137,11 @@ export abstract class BasePlatformHandler {
       log.debug('Notification skipped - SOCIALCRABS_SILENT=1');
       return;
     }
-    
+
     try {
       const notifier = getNotifier();
       if (!notifier) return;
-      
+
       const payload: NotificationPayload = {
         event,
         platform: result.platform,
@@ -156,7 +152,7 @@ export abstract class BasePlatformHandler {
         details,
         timestamp: result.timestamp,
       };
-      
+
       await notifier.notify(payload);
     } catch (err) {
       log.debug('Notification send failed', { error: String(err) });
@@ -180,11 +176,11 @@ export abstract class BasePlatformHandler {
     sanitized = sanitized.replace(/,\s*\./g, '.');
     // Trim trailing/leading whitespace
     sanitized = sanitized.trim();
-    
+
     if (sanitized !== text) {
       log.info('Text sanitized', { original: text, sanitized });
     }
-    
+
     return sanitized;
   }
 
@@ -258,10 +254,7 @@ export abstract class BasePlatformHandler {
   /**
    * Wait for an element to appear
    */
-  protected async waitForElement(
-    selector: string,
-    timeout: number = 10000
-  ): Promise<boolean> {
+  protected async waitForElement(selector: string, timeout: number = 10000): Promise<boolean> {
     const page = await this.getPage();
     try {
       await page.locator(selector).first().waitFor({ timeout });
@@ -294,10 +287,7 @@ export abstract class BasePlatformHandler {
   /**
    * Get attribute value of an element
    */
-  protected async getAttribute(
-    selector: string,
-    attribute: string
-  ): Promise<string | null> {
+  protected async getAttribute(selector: string, attribute: string): Promise<string | null> {
     const page = await this.getPage();
     try {
       return await page.locator(selector).first().getAttribute(attribute);
@@ -341,11 +331,13 @@ export abstract class BasePlatformHandler {
    * Warm-up behavior: scroll feed, pause to "read", simulate natural browsing
    * Call this before performing any action on Instagram/LinkedIn
    */
-  protected async warmUp(options: {
-    scrollCount?: number;
-    minPauseMs?: number;
-    maxPauseMs?: number;
-  } = {}): Promise<void> {
+  protected async warmUp(
+    options: {
+      scrollCount?: number;
+      minPauseMs?: number;
+      maxPauseMs?: number;
+    } = {}
+  ): Promise<void> {
     const {
       scrollCount = 3 + Math.floor(Math.random() * 3), // 3-5 scrolls
       minPauseMs = 2000,
@@ -359,11 +351,11 @@ export abstract class BasePlatformHandler {
       // Random scroll amount
       const scrollAmount = 200 + Math.floor(Math.random() * 400);
       await page.mouse.wheel(0, scrollAmount);
-      
+
       // Random pause to "read" content
       const pauseTime = minPauseMs + Math.floor(Math.random() * (maxPauseMs - minPauseMs));
       await sleep(pauseTime);
-      
+
       log.debug(`Warm-up scroll ${i + 1}/${scrollCount}, paused ${pauseTime}ms`);
     }
 

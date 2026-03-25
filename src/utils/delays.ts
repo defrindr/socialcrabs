@@ -41,10 +41,7 @@ export function sleep(ms: number): Promise<void> {
 /**
  * Sleep for a random duration within the configured range
  */
-export async function humanDelay(
-  min: number = DELAY_MIN,
-  max: number = DELAY_MAX
-): Promise<void> {
+export async function humanDelay(min: number = DELAY_MIN, max: number = DELAY_MAX): Promise<void> {
   const delay = randomDelay(min, max);
   await sleep(delay);
 }

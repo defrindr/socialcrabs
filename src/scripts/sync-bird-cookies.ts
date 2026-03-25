@@ -1,11 +1,11 @@
 #!/usr/bin/env npx tsx
 /**
  * Sync bird CLI cookies to SocialCrabs Twitter session
- * 
+ *
  * Usage:
  *   npx tsx scripts/sync-bird-cookies.ts
  *   npx tsx scripts/sync-bird-cookies.ts --env-file ~/.clawdbot/.env
- * 
+ *
  * This reads AUTH_TOKEN and CT0 from environment and creates/updates
  * the sessions/twitter.json file for Playwright to use.
  */
@@ -139,9 +139,7 @@ if (fs.existsSync(sessionPath)) {
   try {
     const existing = JSON.parse(fs.readFileSync(sessionPath, 'utf-8')) as Session;
     // Keep non-auth cookies from existing session
-    const existingOther = existing.cookies.filter(
-      (c) => !['auth_token', 'ct0'].includes(c.name)
-    );
+    const existingOther = existing.cookies.filter((c) => !['auth_token', 'ct0'].includes(c.name));
     session.cookies = [...session.cookies, ...existingOther];
     session.createdAt = existing.createdAt;
     console.log(`📝 Updating existing session (preserving ${existingOther.length} other cookies)`);

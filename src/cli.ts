@@ -34,22 +34,24 @@ async function withRetry<T>(
   }
 ): Promise<T> {
   let lastError: Error | undefined;
-  
+
   for (let attempt = 1; attempt <= options.retries; attempt++) {
     try {
       return await action();
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
-      
+
       if (attempt < options.retries) {
-        console.log(`⚠️ Attempt ${attempt}/${options.retries} failed for ${options.actionName} (${options.target})`);
+        console.log(
+          `⚠️ Attempt ${attempt}/${options.retries} failed for ${options.actionName} (${options.target})`
+        );
         console.log(`   Error: ${lastError.message}`);
         console.log(`   Retrying in ${RETRY_DELAY_MS / 1000}s...`);
-        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
+        await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
       }
     }
   }
-  
+
   throw lastError;
 }
 
@@ -76,7 +78,7 @@ async function sendNotificationWithContext(
 ): Promise<void> {
   const notifier = claw.notifier;
   if (!notifier.isEnabled()) return;
-  
+
   const payload: NotificationPayload = {
     event: success ? 'action:complete' : 'action:error',
     platform,
@@ -87,7 +89,7 @@ async function sendNotificationWithContext(
     details: context,
     timestamp: Date.now(),
   };
-  
+
   await notifier.notify(payload);
 }
 
@@ -152,21 +154,24 @@ session
     try {
       // Get credentials from options or environment
       const envPrefix = platform.toUpperCase();
-      const username = options.username || process.env[`${envPrefix}_USERNAME`] || process.env[`${envPrefix}_EMAIL`];
+      const username =
+        options.username ||
+        process.env[`${envPrefix}_USERNAME`] ||
+        process.env[`${envPrefix}_EMAIL`];
       const password = options.password || process.env[`${envPrefix}_PASSWORD`];
-      
+
       const headless = options.headless === true || !!(username && password);
-      
+
       const claw = new SocialCrabs({
         browser: { headless },
       });
 
       await claw.initialize();
-      
+
       if (headless && username && password) {
         console.log(`\n🔐 Logging in to ${platform} (headless mode)...`);
         const success = await claw.loginWithCredentials(platform, username, password);
-        
+
         if (success) {
           console.log(`✅ Successfully logged in to ${platform}`);
         } else {
@@ -197,7 +202,7 @@ session
   });
 
 session
-  .command('status')
+  .command('statuses')
   .description('Check login status for all platforms')
   .action(async () => {
     try {
@@ -219,6 +224,37 @@ session
         }
         console.log();
       }
+
+      await claw.shutdown();
+    } catch (error) {
+      console.error('Failed to get status:', error);
+      process.exit(1);
+    }
+  });
+
+session
+  .command('status <platform>')
+  .description('Check login status for all platforms')
+  .action(async (platform: Platform) => {
+    try {
+      const claw = new SocialCrabs({ browser: { headless: true } });
+      await claw.initialize();
+
+      const status = await claw.getStatusByPlatform(platform);
+
+      console.log('\n📊 Session Status\n');
+      console.log(`Browser: ${status.browser ? '✅ Running' : '❌ Not running'}`);
+      console.log(`Uptime: ${Math.floor(status.uptime)}s\n`);
+
+      const platformData = status.platform;
+
+      console.log(`${platform.charAt(0).toUpperCase() + platform.slice(1)}:`);
+      console.log(`  Logged in: ${platformData.loggedIn ? '✅' : '❌'}`);
+      console.log('  Rate limits:');
+      for (const [action, limit] of Object.entries(platformData.rateLimits)) {
+        console.log(`    ${action}: ${limit.remaining}/${limit.total} remaining`);
+      }
+      console.log();
 
       await claw.shutdown();
     } catch (error) {
@@ -257,9 +293,9 @@ ig.command('like <url>')
     const retries = parseRetries(options.retries);
     const context = parseContext(options.context);
     if (context) process.env.SOCIALCRABS_SILENT = '1';
-    
+
     const claw = new SocialCrabs({ browser: { headless: true } });
-    
+
     try {
       await claw.initialize();
 
@@ -273,25 +309,23 @@ ig.command('like <url>')
       );
 
       console.log(`✅ Liked post: ${url}`);
-      
+
       if (context) {
-        await sendNotificationWithContext(
-          claw, 'instagram', 'like', true, url,
-          { postUrl: url, ...context }
-        );
+        await sendNotificationWithContext(claw, 'instagram', 'like', true, url, {
+          postUrl: url,
+          ...context,
+        });
       }
 
       await claw.shutdown();
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       console.log(`❌ Failed to like after ${retries} attempts: ${errorMsg}`);
-      
+
       if (context) {
-        await sendNotificationWithContext(
-          claw, 'instagram', 'like', false, url, context, errorMsg
-        );
+        await sendNotificationWithContext(claw, 'instagram', 'like', false, url, context, errorMsg);
       }
-      
+
       await claw.shutdown();
       process.exit(1);
     }
@@ -305,9 +339,9 @@ ig.command('follow <username>')
     const retries = parseRetries(options.retries);
     const context = parseContext(options.context);
     if (context) process.env.SOCIALCRABS_SILENT = '1';
-    
+
     const claw = new SocialCrabs({ browser: { headless: true } });
-    
+
     try {
       await claw.initialize();
 
@@ -321,25 +355,31 @@ ig.command('follow <username>')
       );
 
       console.log(`✅ Followed: @${username}`);
-      
+
       if (context) {
-        await sendNotificationWithContext(
-          claw, 'instagram', 'follow', true, username,
-          { profileUrl: `https://instagram.com/${username}`, ...context }
-        );
+        await sendNotificationWithContext(claw, 'instagram', 'follow', true, username, {
+          profileUrl: `https://instagram.com/${username}`,
+          ...context,
+        });
       }
 
       await claw.shutdown();
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       console.log(`❌ Failed to follow @${username} after ${retries} attempts: ${errorMsg}`);
-      
+
       if (context) {
         await sendNotificationWithContext(
-          claw, 'instagram', 'follow', false, username, context, errorMsg
+          claw,
+          'instagram',
+          'follow',
+          false,
+          username,
+          context,
+          errorMsg
         );
       }
-      
+
       await claw.shutdown();
       process.exit(1);
     }
@@ -353,9 +393,9 @@ ig.command('comment <url> <text>')
     const retries = parseRetries(options.retries);
     const context = parseContext(options.context);
     if (context) process.env.SOCIALCRABS_SILENT = '1';
-    
+
     const claw = new SocialCrabs({ browser: { headless: true } });
-    
+
     try {
       await claw.initialize();
 
@@ -369,22 +409,29 @@ ig.command('comment <url> <text>')
       );
 
       console.log(`✅ Commented on: ${url}`);
-      
+
       if (context) {
-        await sendNotificationWithContext(
-          claw, 'instagram', 'comment', true, url,
-          { postUrl: url, commentText: text, ...context }
-        );
+        await sendNotificationWithContext(claw, 'instagram', 'comment', true, url, {
+          postUrl: url,
+          commentText: text,
+          ...context,
+        });
       }
 
       await claw.shutdown();
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       console.log(`❌ Failed to comment after ${retries} attempts: ${errorMsg}`);
-      
+
       if (context) {
         await sendNotificationWithContext(
-          claw, 'instagram', 'comment', false, url, context, errorMsg
+          claw,
+          'instagram',
+          'comment',
+          false,
+          url,
+          context,
+          errorMsg
         );
       }
 
@@ -442,7 +489,7 @@ ig.command('followers <username>')
 
       const limit = parseInt(options.limit, 10);
       const followers = await claw.instagram.scrapeFollowers(username, limit);
-      
+
       console.log(`\n📋 Scraped ${followers.length} followers from @${username}:\n`);
       followers.forEach((f, i) => console.log(`  ${i + 1}. @${f}`));
       console.log(JSON.stringify({ username, followers, count: followers.length }, null, 2));
@@ -464,10 +511,89 @@ ig.command('posts <username>')
 
       const limit = parseInt(options.limit, 10);
       const posts = await claw.instagram.getRecentPosts(username, limit);
-      
+
       console.log(`\n📷 Recent posts from @${username}:\n`);
       posts.forEach((p, i) => console.log(`  ${i + 1}. ${p}`));
       console.log(JSON.stringify({ username, posts, count: posts.length }, null, 2));
+
+      await claw.shutdown();
+    } catch (error) {
+      console.error('Error:', error);
+      process.exit(1);
+    }
+  });
+
+ig.command('hashtag-posts <hashtag>')
+  .description('Find Instagram medias by hashtag')
+  .option('-n, --limit <number>', 'Max medias to return', '12')
+  .action(async (hashtag: string, options: { limit: string }) => {
+    try {
+      const claw = new SocialCrabs({ browser: { headless: true } });
+      await claw.initialize();
+
+      const limit = parseInt(options.limit, 10);
+      const medias = await claw.instagram.findPostsByHashtag(hashtag, limit);
+
+      console.log(`\n🏷️ Medias for hashtag #${hashtag.replace(/^#/, '')}:\n`);
+      medias.forEach((media, i) => {
+        const shortcode =
+          (media as Record<string, unknown>).shortcode ??
+          ((media as Record<string, unknown>).media as Record<string, unknown> | undefined)
+            ?.shortcode ??
+          ((media as Record<string, unknown>).media as Record<string, unknown> | undefined)?.code;
+        console.log(`  ${i + 1}. ${String(shortcode ?? 'unknown')}`);
+      });
+      console.log(JSON.stringify({ hashtag, medias, count: medias.length }, null, 2));
+
+      await claw.shutdown();
+    } catch (error) {
+      console.error('Error:', error);
+      process.exit(1);
+    }
+  });
+
+ig.command('post-detail <url>')
+  .description('Check detail data of an Instagram post')
+  .action(async (url: string) => {
+    try {
+      const claw = new SocialCrabs({ browser: { headless: true } });
+      await claw.initialize();
+
+      const detail = await claw.instagram.checkPostDetail(url);
+
+      if (!detail) {
+        console.log('❌ Failed to fetch post detail');
+      } else {
+        console.log(`\n🧾 Post detail for: ${url}\n`);
+        console.log(JSON.stringify(detail, null, 2));
+      }
+
+      await claw.shutdown();
+    } catch (error) {
+      console.error('Error:', error);
+      process.exit(1);
+    }
+  });
+
+// ============================================================================
+// Facebook commands
+// ============================================================================
+
+const facebook = program.command('facebook').alias('fb').description('Facebook actions');
+facebook
+  .command('group-crawler <groupId>')
+  .description('Crawl posts from a Facebook group')
+  .option('-n, --limit <number>', 'Max posts to crawl', '10')
+  .action(async (groupId: string, options: { limit: string }) => {
+    try {
+      const claw = new SocialCrabs({ browser: { headless: true } });
+      await claw.initialize();
+
+      const limit = parseInt(options.limit, 10);
+      const posts = await claw.facebook.crawlGroupPosts(groupId, { limit });
+
+      console.log(`\n👥 Crawled posts from Facebook group ${groupId}:\n`);
+      console.log(JSON.stringify({ groupId, count: posts.length, posts }, null, 2));
 
       await claw.shutdown();
     } catch (error) {
@@ -491,9 +617,9 @@ twitter
     const retries = parseRetries(options.retries);
     const context = parseContext(options.context);
     if (context) process.env.SOCIALCRABS_SILENT = '1';
-    
+
     const claw = new SocialCrabs({ browser: { headless: true } });
-    
+
     try {
       await claw.initialize();
 
@@ -507,25 +633,23 @@ twitter
       );
 
       console.log(`✅ Liked tweet: ${url}`);
-      
+
       if (context) {
-        await sendNotificationWithContext(
-          claw, 'twitter', 'like', true, url,
-          { postUrl: url, ...context }
-        );
+        await sendNotificationWithContext(claw, 'twitter', 'like', true, url, {
+          postUrl: url,
+          ...context,
+        });
       }
 
       await claw.shutdown();
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       console.log(`❌ Failed to like after ${retries} attempts: ${errorMsg}`);
-      
+
       if (context) {
-        await sendNotificationWithContext(
-          claw, 'twitter', 'like', false, url, context, errorMsg
-        );
+        await sendNotificationWithContext(claw, 'twitter', 'like', false, url, context, errorMsg);
       }
-      
+
       await claw.shutdown();
       process.exit(1);
     }
@@ -566,7 +690,7 @@ twitter
     const retries = parseRetries(options.retries);
     const context = parseContext(options.context);
     if (context) process.env.SOCIALCRABS_SILENT = '1';
-    
+
     // Extract username from URL if needed
     let username = usernameOrUrl;
     if (usernameOrUrl.includes('x.com/') || usernameOrUrl.includes('twitter.com/')) {
@@ -576,9 +700,9 @@ twitter
       }
     }
     username = username.replace(/^@/, '');
-    
+
     const claw = new SocialCrabs({ browser: { headless: true } });
-    
+
     try {
       await claw.initialize();
 
@@ -592,25 +716,31 @@ twitter
       );
 
       console.log(`✅ Followed: @${username}`);
-      
+
       if (context) {
-        await sendNotificationWithContext(
-          claw, 'twitter', 'follow', true, username,
-          { profileUrl: `https://x.com/${username}`, ...context }
-        );
+        await sendNotificationWithContext(claw, 'twitter', 'follow', true, username, {
+          profileUrl: `https://x.com/${username}`,
+          ...context,
+        });
       }
 
       await claw.shutdown();
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       console.log(`❌ Failed to follow @${username} after ${retries} attempts: ${errorMsg}`);
-      
+
       if (context) {
         await sendNotificationWithContext(
-          claw, 'twitter', 'follow', false, username, context, errorMsg
+          claw,
+          'twitter',
+          'follow',
+          false,
+          username,
+          context,
+          errorMsg
         );
       }
-      
+
       await claw.shutdown();
       process.exit(1);
     }
@@ -624,7 +754,7 @@ twitter
     try {
       const context = parseContext(options.context);
       if (context) process.env.SOCIALCRABS_SILENT = '1';
-      
+
       const claw = new SocialCrabs({ browser: { headless: true } });
       await claw.initialize();
 
@@ -635,10 +765,14 @@ twitter
       } else {
         console.log(`❌ Failed to reply: ${result.error}`);
       }
-      
+
       if (context) {
         await sendNotificationWithContext(
-          claw, 'twitter', 'comment', result.success, url,
+          claw,
+          'twitter',
+          'comment',
+          result.success,
+          url,
           { postUrl: url, commentText: text, actions: ['💬 Replied'], ...context },
           result.error
         );
@@ -667,18 +801,32 @@ twitter
     try {
       const client = createClientFromEnv();
       const result = await client.search(query, parseInt(options.count || '20', 10));
-      if (!result.success) { console.error('Error:', result.error); process.exit(1); }
-      if (options.json) { console.log(JSON.stringify(result.tweets, null, 2)); return; }
-      if (result.tweets.length === 0) { console.log('No tweets found.'); return; }
+      if (!result.success) {
+        console.error('Error:', result.error);
+        process.exit(1);
+      }
+      if (options.json) {
+        console.log(JSON.stringify(result.tweets, null, 2));
+        return;
+      }
+      if (result.tweets.length === 0) {
+        console.log('No tweets found.');
+        return;
+      }
       for (const tweet of result.tweets) {
         console.log(`\n@${tweet.author.username} (${tweet.author.name})`);
         console.log(tweet.text);
-        console.log(`❤️ ${tweet.likeCount ?? 0}  🔁 ${tweet.retweetCount ?? 0}  💬 ${tweet.replyCount ?? 0}`);
+        console.log(
+          `❤️ ${tweet.likeCount ?? 0}  🔁 ${tweet.retweetCount ?? 0}  💬 ${tweet.replyCount ?? 0}`
+        );
         console.log(`https://x.com/${tweet.author.username}/status/${tweet.id}`);
         console.log('---');
       }
       console.log(`\n${result.tweets.length} tweets found.`);
-    } catch (e: any) { console.error('Error:', e.message); process.exit(1); }
+    } catch (e: any) {
+      console.error('Error:', e.message);
+      process.exit(1);
+    }
   });
 
 twitter
@@ -691,16 +839,27 @@ twitter
     try {
       const client = createClientFromEnv();
       const result = await client.getHomeTimeline(parseInt(options.count || '8', 10));
-      if (!result.success) { console.error('Error:', result.error); process.exit(1); }
-      if (options.json) { console.log(JSON.stringify(result.tweets, null, 2)); return; }
+      if (!result.success) {
+        console.error('Error:', result.error);
+        process.exit(1);
+      }
+      if (options.json) {
+        console.log(JSON.stringify(result.tweets, null, 2));
+        return;
+      }
       for (const tweet of result.tweets) {
         console.log(`\n@${tweet.author.username} (${tweet.author.name})`);
         console.log(tweet.text);
-        console.log(`❤️ ${tweet.likeCount ?? 0}  🔁 ${tweet.retweetCount ?? 0}  💬 ${tweet.replyCount ?? 0}`);
+        console.log(
+          `❤️ ${tweet.likeCount ?? 0}  🔁 ${tweet.retweetCount ?? 0}  💬 ${tweet.replyCount ?? 0}`
+        );
         console.log(`https://x.com/${tweet.author.username}/status/${tweet.id}`);
         console.log('---');
       }
-    } catch (e: any) { console.error('Error:', e.message); process.exit(1); }
+    } catch (e: any) {
+      console.error('Error:', e.message);
+      process.exit(1);
+    }
   });
 
 twitter
@@ -713,15 +872,27 @@ twitter
     try {
       const client = createClientFromEnv();
       const result = await client.getMentions(parseInt(options.count || '5', 10));
-      if (!result.success) { console.error('Error:', result.error); process.exit(1); }
-      if (options.json) { console.log(JSON.stringify(result.tweets, null, 2)); return; }
-      if (result.tweets.length === 0) { console.log('No mentions found.'); return; }
+      if (!result.success) {
+        console.error('Error:', result.error);
+        process.exit(1);
+      }
+      if (options.json) {
+        console.log(JSON.stringify(result.tweets, null, 2));
+        return;
+      }
+      if (result.tweets.length === 0) {
+        console.log('No mentions found.');
+        return;
+      }
       for (const tweet of result.tweets) {
         console.log(`\n@${tweet.author.username}: ${tweet.text}`);
         console.log(`https://x.com/${tweet.author.username}/status/${tweet.id}`);
         console.log('---');
       }
-    } catch (e: any) { console.error('Error:', e.message); process.exit(1); }
+    } catch (e: any) {
+      console.error('Error:', e.message);
+      process.exit(1);
+    }
   });
 
 twitter
@@ -732,9 +903,15 @@ twitter
     try {
       const client = createClientFromEnv();
       const result = await client.getCurrentUser();
-      if (!result.success) { console.error('Error:', result.error); process.exit(1); }
+      if (!result.success) {
+        console.error('Error:', result.error);
+        process.exit(1);
+      }
       console.log(`@${result.user!.username} (${result.user!.name}) [id: ${result.user!.id}]`);
-    } catch (e: any) { console.error('Error:', e.message); process.exit(1); }
+    } catch (e: any) {
+      console.error('Error:', e.message);
+      process.exit(1);
+    }
   });
 
 twitter
@@ -747,8 +924,14 @@ twitter
       const client = createClientFromEnv();
       const tweetId = extractTweetId(url);
       const result = await client.getTweetDetail(tweetId);
-      if (!result.success) { console.error('Error:', result.error); process.exit(1); }
-      if (options.json) { console.log(JSON.stringify(result.tweet, null, 2)); return; }
+      if (!result.success) {
+        console.error('Error:', result.error);
+        process.exit(1);
+      }
+      if (options.json) {
+        console.log(JSON.stringify(result.tweet, null, 2));
+        return;
+      }
       const t = result.tweet!;
       console.log(`@${t.author.username} (${t.author.name})`);
       console.log(t.text);
@@ -756,7 +939,10 @@ twitter
       if (t.quotedTweet) {
         console.log(`\n  Quoting @${t.quotedTweet.author.username}: ${t.quotedTweet.text}`);
       }
-    } catch (e: any) { console.error('Error:', e.message); process.exit(1); }
+    } catch (e: any) {
+      console.error('Error:', e.message);
+      process.exit(1);
+    }
   });
 
 // ============================================================================
@@ -775,9 +961,9 @@ linkedin
     const retries = parseRetries(options.retries);
     const context = parseContext(options.context);
     if (context) process.env.SOCIALCRABS_SILENT = '1';
-    
+
     const claw = new SocialCrabs({ browser: { headless: true } });
-    
+
     try {
       await claw.initialize();
 
@@ -794,25 +980,32 @@ linkedin
       );
 
       console.log(`✅ Sent connection request to: ${url}`);
-      
+
       if (context) {
-        await sendNotificationWithContext(
-          claw, 'linkedin', 'connect', true, url,
-          { profileUrl: url, note: options.note, ...context }
-        );
+        await sendNotificationWithContext(claw, 'linkedin', 'connect', true, url, {
+          profileUrl: url,
+          note: options.note,
+          ...context,
+        });
       }
 
       await claw.shutdown();
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       console.log(`❌ Failed to connect after ${retries} attempts: ${errorMsg}`);
-      
+
       if (context) {
         await sendNotificationWithContext(
-          claw, 'linkedin', 'connect', false, url, context, errorMsg
+          claw,
+          'linkedin',
+          'connect',
+          false,
+          url,
+          context,
+          errorMsg
         );
       }
-      
+
       await claw.shutdown();
       process.exit(1);
     }
@@ -946,13 +1139,13 @@ linkedin
       const args = ['src/scripts/engage.ts', `--query=${options.query}`];
       if (options.dryRun) args.push('--dry-run');
       if (options.skipSearch) args.push('--skip-search');
-      
+
       const { spawn } = await import('child_process');
       const child = spawn('npx', ['tsx', ...args], {
         cwd: process.cwd(),
         stdio: 'inherit',
       });
-      
+
       child.on('exit', (code) => process.exit(code || 0));
     } catch (error) {
       console.error('Error:', error);
@@ -973,29 +1166,43 @@ notify
     try {
       const claw = new SocialCrabs({ browser: { headless: true } });
       const notifier = claw.notifier;
-      
+
       console.log('\n📬 Notification Status\n');
       console.log(`Enabled: ${notifier.isEnabled() ? '✅ Yes' : '❌ No'}`);
-      
+
       const channels = notifier.getChannels();
       console.log(`\nConfigured Channels:`);
       if (channels.length === 0) {
         console.log('  (none)');
       } else {
-        channels.forEach(ch => console.log(`  • ${ch}`));
+        channels.forEach((ch) => console.log(`  • ${ch}`));
       }
-      
+
       console.log(`\nEvent Notifications:`);
-      console.log(`  • action:complete    ${notifier.isEventEnabled('action:complete') ? '✅' : '❌'}`);
-      console.log(`  • action:error       ${notifier.isEventEnabled('action:error') ? '✅' : '❌'}`);
-      console.log(`  • session:login      ${notifier.isEventEnabled('session:login') ? '✅' : '❌'}`);
-      console.log(`  • ratelimit:exceeded ${notifier.isEventEnabled('ratelimit:exceeded') ? '✅' : '❌'}`);
-      
+      console.log(
+        `  • action:complete    ${notifier.isEventEnabled('action:complete') ? '✅' : '❌'}`
+      );
+      console.log(
+        `  • action:error       ${notifier.isEventEnabled('action:error') ? '✅' : '❌'}`
+      );
+      console.log(
+        `  • session:login      ${notifier.isEventEnabled('session:login') ? '✅' : '❌'}`
+      );
+      console.log(
+        `  • ratelimit:exceeded ${notifier.isEventEnabled('ratelimit:exceeded') ? '✅' : '❌'}`
+      );
+
       console.log(`\nEnvironment Variables:`);
       console.log(`  NOTIFY_ENABLED=${process.env.NOTIFY_ENABLED || '(not set)'}`);
-      console.log(`  NOTIFY_TELEGRAM_BOT_TOKEN=${process.env.NOTIFY_TELEGRAM_BOT_TOKEN ? '***configured***' : '(not set)'}`);
-      console.log(`  NOTIFY_TELEGRAM_CHAT_ID=${process.env.NOTIFY_TELEGRAM_CHAT_ID || '(not set)'}`);
-      console.log(`  NOTIFY_DISCORD_WEBHOOK=${process.env.NOTIFY_DISCORD_WEBHOOK ? '***configured***' : '(not set)'}`);
+      console.log(
+        `  NOTIFY_TELEGRAM_BOT_TOKEN=${process.env.NOTIFY_TELEGRAM_BOT_TOKEN ? '***configured***' : '(not set)'}`
+      );
+      console.log(
+        `  NOTIFY_TELEGRAM_CHAT_ID=${process.env.NOTIFY_TELEGRAM_CHAT_ID || '(not set)'}`
+      );
+      console.log(
+        `  NOTIFY_DISCORD_WEBHOOK=${process.env.NOTIFY_DISCORD_WEBHOOK ? '***configured***' : '(not set)'}`
+      );
       console.log(`  NOTIFY_WEBHOOK_URL=${process.env.NOTIFY_WEBHOOK_URL || '(not set)'}`);
       console.log();
     } catch (error) {
@@ -1011,16 +1218,18 @@ notify
     try {
       const claw = new SocialCrabs({ browser: { headless: true } });
       const notifier = claw.notifier;
-      
+
       if (!notifier.isEnabled()) {
         console.log('❌ Notifications are disabled. Set NOTIFY_ENABLED=true in .env');
         process.exit(1);
       }
-      
-      console.log(`\n🧪 Sending test notification${channel ? ` to ${channel}` : ' to all channels'}...\n`);
-      
+
+      console.log(
+        `\n🧪 Sending test notification${channel ? ` to ${channel}` : ' to all channels'}...\n`
+      );
+
       const success = await notifier.sendTest(channel as any);
-      
+
       if (success) {
         console.log('✅ Test notification sent successfully');
       } else {
@@ -1041,19 +1250,19 @@ notify
     try {
       const claw = new SocialCrabs({ browser: { headless: true } });
       const notifier = claw.notifier;
-      
+
       if (!notifier.isEnabled()) {
         console.log('❌ Notifications are disabled. Set NOTIFY_ENABLED=true in .env');
         process.exit(1);
       }
-      
+
       let success: boolean;
       if (options.channel) {
         success = await notifier.send(options.channel as any, message);
       } else {
         success = await notifier.broadcast(message);
       }
-      
+
       if (success) {
         console.log('✅ Notification sent');
       } else {
@@ -1076,45 +1285,52 @@ notify
   .option('--context <json>', 'JSON context with all fields')
   .option('--success', 'Mark as success (default)', true)
   .option('--error <message>', 'Mark as error with message')
-  .action(async (platform: string, action: string, target: string, options: { context?: string; success?: boolean; error?: string }) => {
-    try {
-      const claw = new SocialCrabs({ browser: { headless: true } });
-      const notifier = claw.notifier;
-      
-      if (!notifier.isEnabled()) {
-        console.log('❌ Notifications disabled. Set NOTIFY_ENABLED=true');
-        process.exit(1);
-      }
-      
-      let details: Record<string, unknown> = {};
-      if (options.context) {
-        try {
-          details = JSON.parse(options.context);
-        } catch {
-          console.error('❌ Invalid JSON in --context');
+  .action(
+    async (
+      platform: string,
+      action: string,
+      target: string,
+      options: { context?: string; success?: boolean; error?: string }
+    ) => {
+      try {
+        const claw = new SocialCrabs({ browser: { headless: true } });
+        const notifier = claw.notifier;
+
+        if (!notifier.isEnabled()) {
+          console.log('❌ Notifications disabled. Set NOTIFY_ENABLED=true');
           process.exit(1);
         }
+
+        let details: Record<string, unknown> = {};
+        if (options.context) {
+          try {
+            details = JSON.parse(options.context);
+          } catch {
+            console.error('❌ Invalid JSON in --context');
+            process.exit(1);
+          }
+        }
+
+        const success = !options.error;
+
+        await notifier.notify({
+          event: success ? 'action:complete' : 'action:error',
+          platform: platform as any,
+          action: action as any,
+          success,
+          target,
+          error: options.error,
+          details,
+          timestamp: Date.now(),
+        });
+
+        console.log(`✅ ${platform.toUpperCase()} ${action.toUpperCase()} report sent`);
+      } catch (error) {
+        console.error('Error:', error);
+        process.exit(1);
       }
-      
-      const success = !options.error;
-      
-      await notifier.notify({
-        event: success ? 'action:complete' : 'action:error',
-        platform: platform as any,
-        action: action as any,
-        success,
-        target,
-        error: options.error,
-        details,
-        timestamp: Date.now(),
-      });
-      
-      console.log(`✅ ${platform.toUpperCase()} ${action.toUpperCase()} report sent`);
-    } catch (error) {
-      console.error('Error:', error);
-      process.exit(1);
     }
-  });
+  );
 
 // ============================================================================
 // Test notification commands (for testing templates)
@@ -1126,12 +1342,12 @@ notify
   .action(async () => {
     const claw = new SocialCrabs({ browser: { headless: true } });
     const notifier = claw.notifier;
-    
+
     if (!notifier.isEnabled()) {
       console.log('❌ Notifications disabled. Set NOTIFY_ENABLED=true');
       process.exit(1);
     }
-    
+
     await notifier.notify({
       event: 'action:complete',
       platform: 'twitter',
@@ -1141,13 +1357,14 @@ notify
       details: {
         tweet: 'https://x.com/elonmusk/status/123456789',
         author: 'elonmusk',
-        preview: 'Just mass-produced the most insane humanoid robot ever. Coming to a store near you soon...',
+        preview:
+          'Just mass-produced the most insane humanoid robot ever. Coming to a store near you soon...',
         language: 'EN',
         behaviors: 'Warm-up ✅, Profile check ✅',
       },
       timestamp: Date.now(),
     });
-    
+
     console.log('✅ Test X LIKE notification sent');
   });
 
@@ -1157,12 +1374,12 @@ notify
   .action(async () => {
     const claw = new SocialCrabs({ browser: { headless: true } });
     const notifier = claw.notifier;
-    
+
     if (!notifier.isEnabled()) {
       console.log('❌ Notifications disabled');
       process.exit(1);
     }
-    
+
     await notifier.notify({
       event: 'action:complete',
       platform: 'twitter',
@@ -1177,7 +1394,7 @@ notify
       },
       timestamp: Date.now(),
     });
-    
+
     console.log('✅ Test X FOLLOW notification sent');
   });
 
@@ -1187,12 +1404,12 @@ notify
   .action(async () => {
     const claw = new SocialCrabs({ browser: { headless: true } });
     const notifier = claw.notifier;
-    
+
     if (!notifier.isEnabled()) {
       console.log('❌ Notifications disabled');
       process.exit(1);
     }
-    
+
     await notifier.notify({
       event: 'action:complete',
       platform: 'twitter',
@@ -1209,7 +1426,7 @@ notify
       },
       timestamp: Date.now(),
     });
-    
+
     console.log('✅ Test X ENGAGEMENT notification sent');
   });
 
@@ -1219,12 +1436,12 @@ notify
   .action(async () => {
     const claw = new SocialCrabs({ browser: { headless: true } });
     const notifier = claw.notifier;
-    
+
     if (!notifier.isEnabled()) {
       console.log('❌ Notifications disabled');
       process.exit(1);
     }
-    
+
     await notifier.notify({
       event: 'action:complete',
       platform: 'linkedin',
@@ -1239,7 +1456,7 @@ notify
       },
       timestamp: Date.now(),
     });
-    
+
     console.log('✅ Test LINKEDIN CONNECTION notification sent');
   });
 
@@ -1249,12 +1466,12 @@ notify
   .action(async () => {
     const claw = new SocialCrabs({ browser: { headless: true } });
     const notifier = claw.notifier;
-    
+
     if (!notifier.isEnabled()) {
       console.log('❌ Notifications disabled');
       process.exit(1);
     }
-    
+
     await notifier.notify({
       event: 'action:complete',
       platform: 'linkedin',
@@ -1265,13 +1482,14 @@ notify
         url: 'https://linkedin.com/feed/update/urn:li:activity:123456',
         articleTitle: 'The Future of AI Automation in Enterprise',
         articleAuthor: 'Sarah Chen, CTO at TechVentures',
-        comment: 'Great insights! AI is definitely changing how we approach complex problems. The key is finding the right balance between automation and human oversight.',
+        comment:
+          'Great insights! AI is definitely changing how we approach complex problems. The key is finding the right balance between automation and human oversight.',
         sessionInfo: 'Morning batch (2/4)',
         actions: ['❤️ Liked', '💬 Commented'],
       },
       timestamp: Date.now(),
     });
-    
+
     console.log('✅ Test LINKEDIN COMMENT notification sent');
   });
 
@@ -1281,12 +1499,12 @@ notify
   .action(async () => {
     const claw = new SocialCrabs({ browser: { headless: true } });
     const notifier = claw.notifier;
-    
+
     if (!notifier.isEnabled()) {
       console.log('❌ Notifications disabled');
       process.exit(1);
     }
-    
+
     await notifier.notify({
       event: 'action:complete',
       platform: 'instagram',
@@ -1300,7 +1518,7 @@ notify
       },
       timestamp: Date.now(),
     });
-    
+
     console.log('✅ Test INSTAGRAM FOLLOW notification sent');
   });
 
@@ -1310,12 +1528,12 @@ notify
   .action(async () => {
     const claw = new SocialCrabs({ browser: { headless: true } });
     const notifier = claw.notifier;
-    
+
     if (!notifier.isEnabled()) {
       console.log('❌ Notifications disabled');
       process.exit(1);
     }
-    
+
     await notifier.notify({
       event: 'action:complete',
       platform: 'instagram',
@@ -1329,7 +1547,7 @@ notify
       },
       timestamp: Date.now(),
     });
-    
+
     console.log('✅ Test INSTAGRAM COMMENT notification sent');
   });
 
@@ -1339,12 +1557,12 @@ notify
   .action(async () => {
     const claw = new SocialCrabs({ browser: { headless: true } });
     const notifier = claw.notifier;
-    
+
     if (!notifier.isEnabled()) {
       console.log('❌ Notifications disabled');
       process.exit(1);
     }
-    
+
     await notifier.notify({
       event: 'action:error',
       platform: 'twitter',
@@ -1357,7 +1575,7 @@ notify
       },
       timestamp: Date.now(),
     });
-    
+
     console.log('✅ Test ERROR notification sent');
   });
 
@@ -1367,24 +1585,93 @@ notify
   .action(async () => {
     const claw = new SocialCrabs({ browser: { headless: true } });
     const notifier = claw.notifier;
-    
+
     if (!notifier.isEnabled()) {
       console.log('❌ Notifications disabled. Set NOTIFY_ENABLED=true');
       process.exit(1);
     }
-    
+
     console.log('🧪 Sending all test notifications...\n');
-    
+
     const tests = [
-      { name: 'X LIKE', platform: 'twitter' as Platform, action: 'like' as ActionType, details: { postUrl: 'https://x.com/test/status/123', author: 'testuser', actions: ['❤️ Liked'], language: 'EN', behaviors: 'Warm-up ✅' } },
-      { name: 'X FOLLOW', platform: 'twitter' as Platform, action: 'follow' as ActionType, details: { profileUrl: 'https://x.com/testuser', followers: 5200, queueRemaining: 8, actions: ['👥 Followed'] } },
-      { name: 'X REPLY', platform: 'twitter' as Platform, action: 'comment' as ActionType, details: { postUrl: 'https://x.com/test/status/456', commentText: 'Great insights!', actions: ['❤️ Liked', '💬 Replied'], language: 'EN' } },
-      { name: 'LINKEDIN CONNECTION', platform: 'linkedin' as Platform, action: 'connect' as ActionType, details: { profileUrl: 'https://linkedin.com/in/test', degree: '2nd', method: 'Direct', actions: ['🔗 Connection Sent'] } },
-      { name: 'LINKEDIN COMMENT', platform: 'linkedin' as Platform, action: 'comment' as ActionType, details: { postUrl: 'https://linkedin.com/feed/update/123', articleTitle: 'AI Future', commentText: 'Great article!', actions: ['❤️ Liked', '💬 Commented'] } },
-      { name: 'INSTAGRAM FOLLOW', platform: 'instagram' as Platform, action: 'follow' as ActionType, details: { profileUrl: 'https://instagram.com/testuser', followers: 12500, actions: ['👥 Followed'] } },
-      { name: 'INSTAGRAM COMMENT', platform: 'instagram' as Platform, action: 'comment' as ActionType, details: { postUrl: 'https://instagram.com/p/ABC123', commentText: 'This is fire! 🔥', actions: ['❤️ Liked', '💬 Commented'] } },
+      {
+        name: 'X LIKE',
+        platform: 'twitter' as Platform,
+        action: 'like' as ActionType,
+        details: {
+          postUrl: 'https://x.com/test/status/123',
+          author: 'testuser',
+          actions: ['❤️ Liked'],
+          language: 'EN',
+          behaviors: 'Warm-up ✅',
+        },
+      },
+      {
+        name: 'X FOLLOW',
+        platform: 'twitter' as Platform,
+        action: 'follow' as ActionType,
+        details: {
+          profileUrl: 'https://x.com/testuser',
+          followers: 5200,
+          queueRemaining: 8,
+          actions: ['👥 Followed'],
+        },
+      },
+      {
+        name: 'X REPLY',
+        platform: 'twitter' as Platform,
+        action: 'comment' as ActionType,
+        details: {
+          postUrl: 'https://x.com/test/status/456',
+          commentText: 'Great insights!',
+          actions: ['❤️ Liked', '💬 Replied'],
+          language: 'EN',
+        },
+      },
+      {
+        name: 'LINKEDIN CONNECTION',
+        platform: 'linkedin' as Platform,
+        action: 'connect' as ActionType,
+        details: {
+          profileUrl: 'https://linkedin.com/in/test',
+          degree: '2nd',
+          method: 'Direct',
+          actions: ['🔗 Connection Sent'],
+        },
+      },
+      {
+        name: 'LINKEDIN COMMENT',
+        platform: 'linkedin' as Platform,
+        action: 'comment' as ActionType,
+        details: {
+          postUrl: 'https://linkedin.com/feed/update/123',
+          articleTitle: 'AI Future',
+          commentText: 'Great article!',
+          actions: ['❤️ Liked', '💬 Commented'],
+        },
+      },
+      {
+        name: 'INSTAGRAM FOLLOW',
+        platform: 'instagram' as Platform,
+        action: 'follow' as ActionType,
+        details: {
+          profileUrl: 'https://instagram.com/testuser',
+          followers: 12500,
+          actions: ['👥 Followed'],
+        },
+      },
+      {
+        name: 'INSTAGRAM COMMENT',
+        platform: 'instagram' as Platform,
+        action: 'comment' as ActionType,
+        details: {
+          postUrl: 'https://instagram.com/p/ABC123',
+          commentText: 'This is fire! 🔥',
+          actions: ['❤️ Liked', '💬 Commented'],
+        },
+      },
     ];
-    
+
     for (const test of tests) {
       await notifier.notify({
         event: 'action:complete',
@@ -1396,9 +1683,9 @@ notify
         timestamp: Date.now(),
       });
       console.log(`  ✅ ${test.name}`);
-      await new Promise(r => setTimeout(r, 500)); // Small delay between messages
+      await new Promise((r) => setTimeout(r, 500)); // Small delay between messages
     }
-    
+
     console.log('\n✅ All test notifications sent!');
   });
 

@@ -19,12 +19,12 @@ const SELECTORS = {
   loginPassword: 'input[type="password"]',
   loginButton: 'div[role="button"]:has-text("Log in")',
   nextButton: 'div[role="button"]:has-text("Next")',
-  
+
   // Logged in indicators
   homeTimeline: 'div[aria-label="Timeline: Your Home Timeline"]',
   navHome: 'a[aria-label="Home"]',
   primaryNav: 'nav[role="navigation"]',
-  
+
   // Tweet actions (use [data-testid] without element type — Twitter uses button/div interchangeably)
   likeButton: '[data-testid="like"]',
   unlikeButton: '[data-testid="unlike"]',
@@ -33,23 +33,24 @@ const SELECTORS = {
   retweetConfirm: '[role="menuitem"]:has-text("Repost")',
   replyButton: '[data-testid="reply"]',
   shareButton: '[data-testid="share"]',
-  
+
   // Compose
   tweetInput: '[data-testid="tweetTextarea_0"]',
   replyInput: '[data-testid="tweetTextarea_0"]',
   tweetButton: '[data-testid="tweetButton"], [data-testid="tweetButtonInline"]',
   composeTweet: 'a[data-testid="SideNav_NewTweet_Button"]',
-  
+
   // Profile
   followButton: 'div[data-testid="placementTracking"] div[role="button"]:has-text("Follow")',
-  unfollowButton: 'div[data-testid="placementTracking"] div[role="button"][aria-label*="Following"]',
+  unfollowButton:
+    'div[data-testid="placementTracking"] div[role="button"][aria-label*="Following"]',
   unfollowConfirm: 'div[role="button"][data-testid="confirmationSheetConfirm"]',
-  
+
   // DM
   dmButton: 'div[data-testid="sendDMFromProfile"]',
   dmInput: 'div[data-testid="dmComposerTextInput"]',
   dmSendButton: 'div[data-testid="dmComposerSendButton"]',
-  
+
   // Profile data
   profileName: 'div[data-testid="UserName"] span',
   profileBio: 'div[data-testid="UserDescription"]',
@@ -74,10 +75,10 @@ export class TwitterHandler extends BasePlatformHandler {
     try {
       await this.navigate(`${this.baseUrl}/home`);
       await this.delay();
-      
+
       const hasTimeline = await this.elementExists(SELECTORS.homeTimeline);
       const hasNav = await this.elementExists(SELECTORS.primaryNav);
-      
+
       return hasTimeline || hasNav;
     } catch (error) {
       log.error('Error checking Twitter login status', { error: String(error) });
@@ -91,7 +92,7 @@ export class TwitterHandler extends BasePlatformHandler {
   async login(): Promise<boolean> {
     try {
       log.info('Starting Twitter login...');
-      
+
       await this.navigate(`${this.baseUrl}/login`);
       await this.delay();
 
@@ -135,7 +136,7 @@ export class TwitterHandler extends BasePlatformHandler {
   async loginWithCredentials(username: string, password: string): Promise<boolean> {
     try {
       log.info('Starting Twitter headless login...');
-      
+
       await this.navigate(`${this.baseUrl}/login`);
       await this.delay();
 
@@ -177,7 +178,7 @@ export class TwitterHandler extends BasePlatformHandler {
         const page = await this.getPage();
         await page.keyboard.press('Enter');
       }
-      
+
       await this.delay();
 
       // Wait for login
@@ -228,46 +229,56 @@ export class TwitterHandler extends BasePlatformHandler {
       log.info('Liking tweet', { url: payload.url });
 
       await this.navigate(payload.url);
-      
+
       const page = await this.getPage();
-      
+
       // Wait for page to load properly
       await page.waitForTimeout(3000);
-      
+
       // Check if redirected to login
       const currentUrl = page.url();
       if (currentUrl.includes('/login') || currentUrl.includes('/i/flow/login')) {
         log.error('Redirected to login - session may be invalid');
         await page.screenshot({ path: './sessions/debug-x-login-redirect.png' });
-        return this.createErrorResult('like', payload.url, 'Session expired - redirected to login', startTime, status);
+        return this.createErrorResult(
+          'like',
+          payload.url,
+          'Session expired - redirected to login',
+          startTime,
+          status
+        );
       }
-      
+
       // Handle cookie consent banner
-      const cookieAccept = page.locator('button:has-text("Accept all cookies"), div[role="button"]:has-text("Accept all")');
+      const cookieAccept = page.locator(
+        'button:has-text("Accept all cookies"), div[role="button"]:has-text("Accept all")'
+      );
       if (await cookieAccept.isVisible().catch(() => false)) {
         log.info('Dismissing cookie banner');
         await cookieAccept.first().click();
         await page.waitForTimeout(1000);
       }
-      
+
       // Extract tweet details for notification
       let author = '';
       let preview = '';
       try {
         // Get author from tweet article
-        const authorEl = page.locator('article div[data-testid="User-Name"] a[role="link"]').first();
+        const authorEl = page
+          .locator('article div[data-testid="User-Name"] a[role="link"]')
+          .first();
         const authorHref = await authorEl.getAttribute('href').catch(() => null);
         if (authorHref) {
           author = authorHref.replace('/', '').split('/')[0];
         }
         // Get tweet text
         const tweetTextEl = page.locator('article div[data-testid="tweetText"]').first();
-        preview = await tweetTextEl.textContent().catch(() => '') || '';
+        preview = (await tweetTextEl.textContent().catch(() => '')) || '';
         preview = preview.substring(0, 100);
       } catch {
         log.debug('Could not extract tweet details');
       }
-      
+
       await this.think();
 
       // Check if already liked - look for filled heart (unlike button)
@@ -276,11 +287,15 @@ export class TwitterHandler extends BasePlatformHandler {
       const unlikeSelectors = [
         'div[data-testid="unlike"]',
         'article div[data-testid="unlike"]',
-        '[data-testid="unlike"]'
+        '[data-testid="unlike"]',
       ];
-      
+
       for (const sel of unlikeSelectors) {
-        const alreadyLiked = await page.locator(sel).first().isVisible().catch(() => false);
+        const alreadyLiked = await page
+          .locator(sel)
+          .first()
+          .isVisible()
+          .catch(() => false);
         if (alreadyLiked) {
           log.info('Tweet already liked');
           return this.createResult('like', payload.url, startTime, status, {
@@ -296,9 +311,9 @@ export class TwitterHandler extends BasePlatformHandler {
       const likeSelectors = [
         'div[data-testid="like"]',
         'article div[data-testid="like"]',
-        '[data-testid="like"]'
+        '[data-testid="like"]',
       ];
-      
+
       let likeButton = null;
       for (const sel of likeSelectors) {
         const btn = page.locator(sel).first();
@@ -307,11 +322,17 @@ export class TwitterHandler extends BasePlatformHandler {
           break;
         }
       }
-      
+
       if (!likeButton) {
         await page.screenshot({ path: './sessions/debug-x-like-not-found.png' });
         log.error('Like button not found - screenshot saved');
-        return this.createErrorResult('like', payload.url, 'Like button not found', startTime, status);
+        return this.createErrorResult(
+          'like',
+          payload.url,
+          'Like button not found',
+          startTime,
+          status
+        );
       }
 
       try {
@@ -332,13 +353,17 @@ export class TwitterHandler extends BasePlatformHandler {
       // Verify like worked - check for unlike button
       let likeSuccess = false;
       for (const sel of unlikeSelectors) {
-        const unlikeBtn = await page.locator(sel).first().isVisible().catch(() => false);
+        const unlikeBtn = await page
+          .locator(sel)
+          .first()
+          .isVisible()
+          .catch(() => false);
         if (unlikeBtn) {
           likeSuccess = true;
           break;
         }
       }
-      
+
       if (likeSuccess) {
         await this.recordAction('like');
         log.info('Successfully liked tweet');
@@ -367,7 +392,13 @@ export class TwitterHandler extends BasePlatformHandler {
     const { allowed, status } = await this.checkAndRecordAction('comment');
 
     if (!allowed) {
-      return this.createErrorResult('comment', payload.url, 'Rate limit exceeded', startTime, status);
+      return this.createErrorResult(
+        'comment',
+        payload.url,
+        'Rate limit exceeded',
+        startTime,
+        status
+      );
     }
 
     try {
@@ -384,7 +415,13 @@ export class TwitterHandler extends BasePlatformHandler {
       if (!hasInlineInput) {
         // Strategy 2: Click reply button to open modal/inline reply
         if (!(await this.waitForElement(SELECTORS.replyButton, 10000))) {
-          return this.createErrorResult('comment', payload.url, 'Reply button not found', startTime, status);
+          return this.createErrorResult(
+            'comment',
+            payload.url,
+            'Reply button not found',
+            startTime,
+            status
+          );
         }
 
         await this.clickHuman(SELECTORS.replyButton);
@@ -393,9 +430,17 @@ export class TwitterHandler extends BasePlatformHandler {
         // Wait for reply input (modal or inline)
         if (!(await this.waitForElement(SELECTORS.replyInput, 10000))) {
           // Strategy 3: Check for dialog-based reply input
-          const dialogInput = await page.locator('[role="dialog"] [data-testid="tweetTextarea_0"]').count();
+          const dialogInput = await page
+            .locator('[role="dialog"] [data-testid="tweetTextarea_0"]')
+            .count();
           if (dialogInput === 0) {
-            return this.createErrorResult('comment', payload.url, 'Reply input not found', startTime, status);
+            return this.createErrorResult(
+              'comment',
+              payload.url,
+              'Reply input not found',
+              startTime,
+              status
+            );
           }
         }
       }
@@ -408,13 +453,19 @@ export class TwitterHandler extends BasePlatformHandler {
 
       // Submit reply — try multiple selectors
       if (!(await this.elementExists(SELECTORS.tweetButton))) {
-        return this.createErrorResult('comment', payload.url, 'Reply submit button not found', startTime, status);
+        return this.createErrorResult(
+          'comment',
+          payload.url,
+          'Reply submit button not found',
+          startTime,
+          status
+        );
       }
       await this.clickHuman(SELECTORS.tweetButton);
 
       await this.delay();
       await this.recordAction('comment');
-      
+
       log.info('Successfully replied to tweet');
       return this.createResult('comment', payload.url, startTime, status, {
         postUrl: payload.url,
@@ -435,7 +486,13 @@ export class TwitterHandler extends BasePlatformHandler {
     const { allowed, status } = await this.checkAndRecordAction('follow');
 
     if (!allowed) {
-      return this.createErrorResult('follow', payload.username, 'Rate limit exceeded', startTime, status);
+      return this.createErrorResult(
+        'follow',
+        payload.username,
+        'Rate limit exceeded',
+        startTime,
+        status
+      );
     }
 
     try {
@@ -443,18 +500,20 @@ export class TwitterHandler extends BasePlatformHandler {
 
       const profileUrl = `${this.baseUrl}/${payload.username}`;
       await this.navigate(profileUrl);
-      
+
       const page = await this.getPage();
       await page.waitForTimeout(3000);
-      
+
       // Handle cookie consent banner
-      const cookieAccept = page.locator('button:has-text("Accept all cookies"), div[role="button"]:has-text("Accept all")');
+      const cookieAccept = page.locator(
+        'button:has-text("Accept all cookies"), div[role="button"]:has-text("Accept all")'
+      );
       if (await cookieAccept.isVisible().catch(() => false)) {
         log.info('Dismissing cookie banner');
         await cookieAccept.first().click();
         await page.waitForTimeout(1000);
       }
-      
+
       await this.think();
 
       // Check if already following - multiple selectors
@@ -462,11 +521,15 @@ export class TwitterHandler extends BasePlatformHandler {
         'div[data-testid="placementTracking"] div[role="button"][data-testid*="unfollow"]',
         'div[role="button"][aria-label*="Following"]',
         'div[data-testid="userActions"] div[role="button"]:has-text("Following")',
-        '[data-testid*="unfollow"]'
+        '[data-testid*="unfollow"]',
       ];
-      
+
       for (const sel of followingSelectors) {
-        const isFollowing = await page.locator(sel).first().isVisible().catch(() => false);
+        const isFollowing = await page
+          .locator(sel)
+          .first()
+          .isVisible()
+          .catch(() => false);
         if (isFollowing) {
           log.info('Already following user');
           return this.createResult('follow', payload.username, startTime, status, {
@@ -481,9 +544,9 @@ export class TwitterHandler extends BasePlatformHandler {
         'div[data-testid="placementTracking"] div[role="button"]:has-text("Follow")',
         'div[role="button"][aria-label*="Follow @"]',
         'div[data-testid="userActions"] div[role="button"]:has-text("Follow")',
-        '[data-testid*="follow"]:not([data-testid*="unfollow"])'
+        '[data-testid*="follow"]:not([data-testid*="unfollow"])',
       ];
-      
+
       let followButton = null;
       for (const sel of followSelectors) {
         const btn = page.locator(sel).first();
@@ -493,11 +556,17 @@ export class TwitterHandler extends BasePlatformHandler {
           break;
         }
       }
-      
+
       if (!followButton) {
         await page.screenshot({ path: './sessions/debug-x-follow-not-found.png' });
         log.error('Follow button not found - screenshot saved');
-        return this.createErrorResult('follow', payload.username, 'Follow button not found', startTime, status);
+        return this.createErrorResult(
+          'follow',
+          payload.username,
+          'Follow button not found',
+          startTime,
+          status
+        );
       }
 
       try {
@@ -518,13 +587,17 @@ export class TwitterHandler extends BasePlatformHandler {
       // Verify follow worked
       let followSuccess = false;
       for (const sel of followingSelectors) {
-        const isNowFollowing = await page.locator(sel).first().isVisible().catch(() => false);
+        const isNowFollowing = await page
+          .locator(sel)
+          .first()
+          .isVisible()
+          .catch(() => false);
         if (isNowFollowing) {
           followSuccess = true;
           break;
         }
       }
-      
+
       if (followSuccess) {
         await this.recordAction('follow');
         log.info('Successfully followed Twitter user');
@@ -535,7 +608,13 @@ export class TwitterHandler extends BasePlatformHandler {
       }
 
       await page.screenshot({ path: './sessions/debug-x-follow-verify-failed.png' });
-      return this.createErrorResult('follow', payload.username, 'Follow action failed', startTime, status);
+      return this.createErrorResult(
+        'follow',
+        payload.username,
+        'Follow action failed',
+        startTime,
+        status
+      );
     } catch (error) {
       log.error('Error following Twitter user', { error: String(error) });
       return this.createErrorResult('follow', payload.username, String(error), startTime, status);
@@ -550,7 +629,13 @@ export class TwitterHandler extends BasePlatformHandler {
     const { allowed, status } = await this.checkAndRecordAction('follow');
 
     if (!allowed) {
-      return this.createErrorResult('unfollow', payload.username, 'Rate limit exceeded', startTime, status);
+      return this.createErrorResult(
+        'unfollow',
+        payload.username,
+        'Rate limit exceeded',
+        startTime,
+        status
+      );
     }
 
     try {
@@ -583,7 +668,13 @@ export class TwitterHandler extends BasePlatformHandler {
         });
       }
 
-      return this.createErrorResult('unfollow', payload.username, 'Unfollow action failed', startTime, status);
+      return this.createErrorResult(
+        'unfollow',
+        payload.username,
+        'Unfollow action failed',
+        startTime,
+        status
+      );
     } catch (error) {
       log.error('Error unfollowing Twitter user', { error: String(error) });
       return this.createErrorResult('unfollow', payload.username, String(error), startTime, status);
@@ -598,7 +689,13 @@ export class TwitterHandler extends BasePlatformHandler {
     const { allowed, status } = await this.checkAndRecordAction('dm');
 
     if (!allowed) {
-      return this.createErrorResult('dm', payload.username, 'Rate limit exceeded', startTime, status);
+      return this.createErrorResult(
+        'dm',
+        payload.username,
+        'Rate limit exceeded',
+        startTime,
+        status
+      );
     }
 
     try {
@@ -614,7 +711,7 @@ export class TwitterHandler extends BasePlatformHandler {
         // Debug: save screenshot to see what's on the page
         await page.screenshot({ path: `sessions/debug-dm-${payload.username}.png` });
         log.warn('DM button not found, saved debug screenshot', { username: payload.username });
-        
+
         // Try alternative: click the "Message" link in the actions menu
         const messageLink = await page.$('a[href*="/messages/compose"]');
         if (messageLink) {
@@ -622,7 +719,13 @@ export class TwitterHandler extends BasePlatformHandler {
           await messageLink.click();
           await this.delay();
         } else {
-          return this.createErrorResult('dm', payload.username, 'DM button not found', startTime, status);
+          return this.createErrorResult(
+            'dm',
+            payload.username,
+            'DM button not found',
+            startTime,
+            status
+          );
         }
       } else {
         await this.clickHuman(SELECTORS.dmButton);
@@ -631,7 +734,13 @@ export class TwitterHandler extends BasePlatformHandler {
 
       // Wait for DM input
       if (!(await this.waitForElement(SELECTORS.dmInput, 10000))) {
-        return this.createErrorResult('dm', payload.username, 'DM input not found', startTime, status);
+        return this.createErrorResult(
+          'dm',
+          payload.username,
+          'DM input not found',
+          startTime,
+          status
+        );
       }
 
       // Type message
@@ -646,7 +755,7 @@ export class TwitterHandler extends BasePlatformHandler {
 
       await this.delay();
       await this.recordAction('dm');
-      
+
       log.info('Successfully sent Twitter DM');
       return this.createResult('dm', payload.username, startTime, status, {
         profileUrl: `https://x.com/${payload.username}`,
@@ -667,7 +776,13 @@ export class TwitterHandler extends BasePlatformHandler {
     const { allowed, status } = await this.checkAndRecordAction('post');
 
     if (!allowed) {
-      return this.createErrorResult('post', payload.text.substring(0, 50), 'Rate limit exceeded', startTime, status);
+      return this.createErrorResult(
+        'post',
+        payload.text.substring(0, 50),
+        'Rate limit exceeded',
+        startTime,
+        status
+      );
     }
 
     try {
@@ -677,7 +792,7 @@ export class TwitterHandler extends BasePlatformHandler {
       await this.navigate(`${this.baseUrl}/home`);
       await this.think();
       await this.pause();
-      
+
       // Click the NEW TWEET button in sidebar (not reply, not quote - brand new tweet)
       // This is more reliable than /compose/tweet URL
       let page = await this.getPage();
@@ -693,20 +808,32 @@ export class TwitterHandler extends BasePlatformHandler {
 
       // Wait for tweet input
       if (!(await this.waitForElement(SELECTORS.tweetInput, 10000))) {
-        return this.createErrorResult('post', payload.text, 'Tweet input not found', startTime, status);
+        return this.createErrorResult(
+          'post',
+          payload.text,
+          'Tweet input not found',
+          startTime,
+          status
+        );
       }
 
       // Sanitize and type tweet
       const sanitizedText = this.sanitizeText(payload.text);
       await this.clickHuman(SELECTORS.tweetInput);
-      
+
       page = await this.getPage();
       await page.keyboard.type(sanitizedText, { delay: 50 });
       await this.pause();
 
       // Post tweet
       if (!(await this.elementExists(SELECTORS.tweetButton))) {
-        return this.createErrorResult('post', payload.text.substring(0, 50), 'Tweet submit button not found', startTime, status);
+        return this.createErrorResult(
+          'post',
+          payload.text.substring(0, 50),
+          'Tweet submit button not found',
+          startTime,
+          status
+        );
       }
       await this.clickHuman(SELECTORS.tweetButton);
 
@@ -722,9 +849,9 @@ export class TwitterHandler extends BasePlatformHandler {
         // The tweet WAS posted, we just couldn't get the URL
         log.warn('Tweet posted but URL capture failed - returning empty URL');
       }
-      
+
       await this.recordAction('post');
-      
+
       log.info('Successfully posted tweet');
       return this.createResult('post', payload.text.substring(0, 50), startTime, status, {
         commentText: sanitizedText,
@@ -764,7 +891,13 @@ export class TwitterHandler extends BasePlatformHandler {
       }
 
       if (!(await this.elementExists(SELECTORS.retweetButton))) {
-        return this.createErrorResult('retweet', url, 'Retweet button not found', startTime, status);
+        return this.createErrorResult(
+          'retweet',
+          url,
+          'Retweet button not found',
+          startTime,
+          status
+        );
       }
 
       await this.clickHuman(SELECTORS.retweetButton);
@@ -777,7 +910,7 @@ export class TwitterHandler extends BasePlatformHandler {
 
       await this.delay();
       await this.recordAction('like');
-      
+
       log.info('Successfully retweeted');
       return this.createResult('retweet', url, startTime, status, {
         postUrl: url,
@@ -849,16 +982,16 @@ export class TwitterHandler extends BasePlatformHandler {
   private parseCount(text: string): number {
     const cleaned = text.replace(/,/g, '').trim();
     const match = cleaned.match(/^([\d.]+)([KMB])?$/i);
-    
+
     if (!match) return 0;
-    
+
     let num = parseFloat(match[1]);
     const suffix = match[2]?.toUpperCase();
-    
+
     if (suffix === 'K') num *= 1000;
     else if (suffix === 'M') num *= 1000000;
     else if (suffix === 'B') num *= 1000000000;
-    
+
     return Math.round(num);
   }
 }

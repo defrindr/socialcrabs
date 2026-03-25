@@ -60,6 +60,7 @@ Every engagement job MUST read the user's `VOICE.md` before writing comments.
 Create a `VOICE.md` in your workspace with your style rules.
 
 ### Key Rules:
+
 - **8th grade reading level** — simple words, short sentences
 - **Max 1-2 sentences** — 10-20 words for X/LinkedIn, 5-15 for Instagram
 - **Reference something SPECIFIC** about the post/article
@@ -68,13 +69,16 @@ Create a `VOICE.md` in your workspace with your style rules.
 - **Match the language** — English/Portuguese/Spanish as appropriate
 
 ### Banned Patterns:
+
 - Em-dashes (—) and en-dashes (–) — ClawSocial sanitizes these at code level
 - "Game changer", "hit different", "next level", "pure power"
 - "Been [verb]ing" as default opener
 - Any corporate buzzwords
 
 ### Comment Storage:
+
 Log all comments to avoid repetition:
+
 ```
 # ~/workspace/x-comments.txt
 2026-02-06 15:30 | @username | Your comment text here
@@ -104,6 +108,7 @@ If ZERO uncommented posts:
 #### Replenish Script Example
 
 Create a shell script that:
+
 - Searches 4-6 different queries sequentially
 - Adds 8-15 second random pauses between each (human-like)
 - Collects unique URNs
@@ -215,6 +220,7 @@ Wait for user confirmation before proceeding.
 ### Session Expiry Alert Protocol
 
 When ANY platform session expires:
+
 1. **Immediately trigger re-auth** (sends push notification / enters credentials)
 2. **Alert user on all available channels** — say you're waiting for confirmation
 3. **Wait for user confirmation** (they accept 2FA, then message back)
@@ -393,23 +399,24 @@ Set connect_attempted=true for this profile.
 
 Spread jobs across the day with odd minutes to look human:
 
-| Time Slot | Platform | Jobs | Schedule |
-|-----------|----------|------|----------|
-| 08:15-08:51 | Instagram | 3 | Morning engagement |
-| 10:23-11:19 | X | 7 | AM like+reply |
-| 12:07-12:38 | LinkedIn | 3 | Connect |
-| 13:17-14:03 | LinkedIn | 2 | Comment |
-| 13:22-13:44 | Instagram | 2 | Afternoon engagement |
-| 15:07-16:09 | X | 7 | PM like+reply |
-| 18:17-18:38 | Instagram | 2 | Evening engagement |
-| 19:23-20:11 | LinkedIn | 2 | Comment |
-| 21:07-22:09 | X | 7 | Evening like+reply |
-| 23:11-02:33 | X | 7 | Late night like+reply |
-| 00:33-02:23 | LinkedIn | 7 | Night like+comment+connect |
-| 02:41-04:07 | Instagram | 7 | Night engagement |
-| 04:23-06:03 | X | 7 | Night like+reply |
+| Time Slot   | Platform  | Jobs | Schedule                   |
+| ----------- | --------- | ---- | -------------------------- |
+| 08:15-08:51 | Instagram | 3    | Morning engagement         |
+| 10:23-11:19 | X         | 7    | AM like+reply              |
+| 12:07-12:38 | LinkedIn  | 3    | Connect                    |
+| 13:17-14:03 | LinkedIn  | 2    | Comment                    |
+| 13:22-13:44 | Instagram | 2    | Afternoon engagement       |
+| 15:07-16:09 | X         | 7    | PM like+reply              |
+| 18:17-18:38 | Instagram | 2    | Evening engagement         |
+| 19:23-20:11 | LinkedIn  | 2    | Comment                    |
+| 21:07-22:09 | X         | 7    | Evening like+reply         |
+| 23:11-02:33 | X         | 7    | Late night like+reply      |
+| 00:33-02:23 | LinkedIn  | 7    | Night like+comment+connect |
+| 02:41-04:07 | Instagram | 7    | Night engagement           |
+| 04:23-06:03 | X         | 7    | Night like+reply           |
 
 **Rules:**
+
 - Min 10 min between comments on same platform
 - Min 15 min between connect requests
 - Min 5 min between likes
@@ -441,9 +448,10 @@ STEP 8: Send ONE consolidated Telegram notification with all actions
 ## ❌ Anti-Patterns (DO NOT USE)
 
 ### Hardcoded Comment Templates
+
 ```javascript
 // ❌ WRONG - Never do this
-const COMMENT_TEMPLATES = ["Great shot! 📸", "Love this! 🔥"];
+const COMMENT_TEMPLATES = ['Great shot! 📸', 'Love this! 🔥'];
 comment = COMMENT_TEMPLATES[random];
 
 // ✅ CORRECT - Agent generates based on content
@@ -453,6 +461,7 @@ comment = COMMENT_TEMPLATES[random];
 ```
 
 ### Generic AI Phrases
+
 ```
 ❌ "Fascinating approach!"
 ❌ "Excellent analysis!"
@@ -466,6 +475,7 @@ comment = COMMENT_TEMPLATES[random];
 ```
 
 ### Using npm run cli
+
 ```bash
 # ❌ WRONG — slow tsx compilation, causes browser hangs
 npm run cli -- x like <url>
@@ -479,6 +489,7 @@ node dist/cli.js x like <url>
 ## Command Reference
 
 ### Actions (auto-notify via --context)
+
 ```bash
 # X
 node dist/cli.js x like <url> --context='{"author":"user","preview":"...","behaviors":"..."}'
@@ -502,6 +513,7 @@ node dist/cli.js session status
 ```
 
 ### Suppress Auto-Notify
+
 ```bash
 CLAWSOCIAL_SILENT=1 node dist/cli.js x like <url>
 ```

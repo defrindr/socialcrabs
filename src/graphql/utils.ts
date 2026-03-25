@@ -24,11 +24,16 @@ export function extractMedia(result: any): MediaItem[] | undefined {
       mediaItem.height = sizes.large.h;
     }
     if ((item.type === 'video' || item.type === 'animated_gif') && item.video_info?.variants) {
-      const mp4Variants = item.video_info.variants.filter((v: any) => v.content_type === 'video/mp4' && typeof v.url === 'string');
-      const withBitrate = mp4Variants.filter((v: any) => typeof v.bitrate === 'number').sort((a: any, b: any) => b.bitrate - a.bitrate);
+      const mp4Variants = item.video_info.variants.filter(
+        (v: any) => v.content_type === 'video/mp4' && typeof v.url === 'string'
+      );
+      const withBitrate = mp4Variants
+        .filter((v: any) => typeof v.bitrate === 'number')
+        .sort((a: any, b: any) => b.bitrate - a.bitrate);
       const selected = withBitrate[0] ?? mp4Variants[0];
       if (selected) mediaItem.videoUrl = selected.url;
-      if (typeof item.video_info.duration_millis === 'number') mediaItem.durationMs = item.video_info.duration_millis;
+      if (typeof item.video_info.duration_millis === 'number')
+        mediaItem.durationMs = item.video_info.duration_millis;
     }
     media.push(mediaItem);
   }
@@ -41,7 +46,9 @@ export function extractNoteTweetText(result: any): string | undefined {
   return firstText(note.text, note.richtext?.text, note.rich_text?.text);
 }
 
-export function extractArticleMetadata(result: any): { title: string; previewText?: string } | undefined {
+export function extractArticleMetadata(
+  result: any
+): { title: string; previewText?: string } | undefined {
   const article = result?.article;
   if (!article) return undefined;
   const articleResult = article.article_results?.result ?? article;
@@ -57,9 +64,14 @@ export function extractArticleText(result: any): string | undefined {
   const articleResult = article.article_results?.result ?? article;
   const title = firstText(articleResult.title, article.title);
   let body = firstText(
-    articleResult.plain_text, article.plain_text,
-    articleResult.body?.text, articleResult.content?.text,
-    articleResult.text, article.body?.text, article.content?.text, article.text
+    articleResult.plain_text,
+    article.plain_text,
+    articleResult.body?.text,
+    articleResult.content?.text,
+    articleResult.text,
+    article.body?.text,
+    article.content?.text,
+    article.text
   );
   if (body && title && body.trim() === title.trim()) body = undefined;
   if (title && body && !body.startsWith(title)) return `${title}\n\n${body}`;
@@ -67,7 +79,11 @@ export function extractArticleText(result: any): string | undefined {
 }
 
 export function extractTweetText(result: any): string | undefined {
-  return extractArticleText(result) ?? extractNoteTweetText(result) ?? firstText(result?.legacy?.full_text);
+  return (
+    extractArticleText(result) ??
+    extractNoteTweetText(result) ??
+    firstText(result?.legacy?.full_text)
+  );
 }
 
 export function unwrapTweetResult(result: any): any {
@@ -112,7 +128,9 @@ export function mapTweetResult(result: any, quoteDepth = 1): Tweet | undefined {
 
 export function collectTweetResultsFromEntry(entry: any): any[] {
   const results: any[] = [];
-  const push = (r: any) => { if (r?.rest_id) results.push(r); };
+  const push = (r: any) => {
+    if (r?.rest_id) results.push(r);
+  };
   const content = entry.content;
   push(content?.itemContent?.tweet_results?.result);
   push(content?.item?.itemContent?.tweet_results?.result);
@@ -141,11 +159,18 @@ export function parseTweetsFromInstructions(instructions: any[], quoteDepth = 1)
   return tweets;
 }
 
-export function extractCursorFromInstructions(instructions: any[], cursorType = 'Bottom'): string | undefined {
+export function extractCursorFromInstructions(
+  instructions: any[],
+  cursorType = 'Bottom'
+): string | undefined {
   for (const instruction of instructions ?? []) {
     for (const entry of instruction.entries ?? []) {
       const content = entry.content;
-      if (content?.cursorType === cursorType && typeof content.value === 'string' && content.value.length > 0) {
+      if (
+        content?.cursorType === cursorType &&
+        typeof content.value === 'string' &&
+        content.value.length > 0
+      ) {
         return content.value;
       }
     }
