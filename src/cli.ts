@@ -148,6 +148,7 @@ session
   .command('login <platform>')
   .description('Login to a platform (instagram, twitter, linkedin)')
   .option('--headless', 'Run in headless mode (reads credentials from env)')
+  .option('-s, --session <name>', 'Session profile name (e.g. work, personal)', 'default')
   .option('-u, --username <username>', 'Username/email (or set PLATFORM_USERNAME env)')
   .option('-p, --password <password>', 'Password (or set PLATFORM_PASSWORD env)')
   .action(async (platform: Platform, options) => {
@@ -164,6 +165,7 @@ session
 
       const claw = new SocialCrabs({
         browser: { headless },
+        session: { profile: options.session },
       });
 
       await claw.initialize();
@@ -204,9 +206,13 @@ session
 session
   .command('statuses')
   .description('Check login status for all platforms')
-  .action(async () => {
+  .option('-s, --session <name>', 'Session profile name (e.g. work, personal)', 'default')
+  .action(async (options: { session: string }) => {
     try {
-      const claw = new SocialCrabs({ browser: { headless: true } });
+      const claw = new SocialCrabs({
+        browser: { headless: true },
+        session: { profile: options.session },
+      });
       await claw.initialize();
 
       const status = await claw.getStatus();
@@ -235,9 +241,13 @@ session
 session
   .command('status <platform>')
   .description('Check login status for all platforms')
-  .action(async (platform: Platform) => {
+  .option('-s, --session <name>', 'Session profile name (e.g. work, personal)', 'default')
+  .action(async (platform: Platform, options: { session: string }) => {
     try {
-      const claw = new SocialCrabs({ browser: { headless: true } });
+      const claw = new SocialCrabs({
+        browser: { headless: true },
+        session: { profile: options.session },
+      });
       await claw.initialize();
 
       const status = await claw.getStatusByPlatform(platform);
@@ -266,9 +276,13 @@ session
 session
   .command('logout <platform>')
   .description('Logout from a platform')
-  .action(async (platform: Platform) => {
+  .option('-s, --session <name>', 'Session profile name (e.g. work, personal)', 'default')
+  .action(async (platform: Platform, options: { session: string }) => {
     try {
-      const claw = new SocialCrabs({ browser: { headless: true } });
+      const claw = new SocialCrabs({
+        browser: { headless: true },
+        session: { profile: options.session },
+      });
       await claw.initialize();
       await claw.logout(platform);
       console.log(`✅ Logged out of ${platform}`);
@@ -287,14 +301,18 @@ const ig = program.command('ig').alias('instagram').description('Instagram actio
 
 ig.command('like <url>')
   .description('Like an Instagram post')
+  .option('-s, --session <name>', 'Session profile name (e.g. work, personal)', 'default')
   .option('-c, --context <json>', 'JSON context for notification')
   .option('-r, --retries <number>', 'Number of retry attempts on failure', String(DEFAULT_RETRIES))
-  .action(async (url: string, options: { context?: string; retries?: string }) => {
+  .action(async (url: string, options: { context?: string; retries?: string; session: string }) => {
     const retries = parseRetries(options.retries);
     const context = parseContext(options.context);
     if (context) process.env.SOCIALCRABS_SILENT = '1';
 
-    const claw = new SocialCrabs({ browser: { headless: true } });
+    const claw = new SocialCrabs({
+      browser: { headless: true },
+      session: { profile: options.session },
+    });
 
     try {
       await claw.initialize();
@@ -335,116 +353,136 @@ ig.command('follow <username>')
   .description('Follow an Instagram user')
   .option('-c, --context <json>', 'JSON context for notification')
   .option('-r, --retries <number>', 'Number of retry attempts on failure', String(DEFAULT_RETRIES))
-  .action(async (username: string, options: { context?: string; retries?: string }) => {
-    const retries = parseRetries(options.retries);
-    const context = parseContext(options.context);
-    if (context) process.env.SOCIALCRABS_SILENT = '1';
+  .option('-s, --session <name>', 'Session profile name (e.g. work, personal)', 'default')
+  .action(
+    async (username: string, options: { context?: string; retries?: string; session: string }) => {
+      const retries = parseRetries(options.retries);
+      const context = parseContext(options.context);
+      if (context) process.env.SOCIALCRABS_SILENT = '1';
 
-    const claw = new SocialCrabs({ browser: { headless: true } });
+      const claw = new SocialCrabs({
+        browser: { headless: true },
+        session: { profile: options.session },
+      });
 
-    try {
-      await claw.initialize();
+      try {
+        await claw.initialize();
 
-      await withRetry(
-        async () => {
-          const res = await claw.instagram.follow({ username });
-          if (!res.success) throw new Error(res.error || 'Follow failed');
-          return res;
-        },
-        { retries, actionName: 'IG follow', target: `@${username}` }
-      );
-
-      console.log(`✅ Followed: @${username}`);
-
-      if (context) {
-        await sendNotificationWithContext(claw, 'instagram', 'follow', true, username, {
-          profileUrl: `https://instagram.com/${username}`,
-          ...context,
-        });
-      }
-
-      await claw.shutdown();
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      console.log(`❌ Failed to follow @${username} after ${retries} attempts: ${errorMsg}`);
-
-      if (context) {
-        await sendNotificationWithContext(
-          claw,
-          'instagram',
-          'follow',
-          false,
-          username,
-          context,
-          errorMsg
+        await withRetry(
+          async () => {
+            const res = await claw.instagram.follow({ username });
+            if (!res.success) throw new Error(res.error || 'Follow failed');
+            return res;
+          },
+          { retries, actionName: 'IG follow', target: `@${username}` }
         );
-      }
 
-      await claw.shutdown();
-      process.exit(1);
+        console.log(`✅ Followed: @${username}`);
+
+        if (context) {
+          await sendNotificationWithContext(claw, 'instagram', 'follow', true, username, {
+            profileUrl: `https://instagram.com/${username}`,
+            ...context,
+          });
+        }
+
+        await claw.shutdown();
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        console.log(`❌ Failed to follow @${username} after ${retries} attempts: ${errorMsg}`);
+
+        if (context) {
+          await sendNotificationWithContext(
+            claw,
+            'instagram',
+            'follow',
+            false,
+            username,
+            context,
+            errorMsg
+          );
+        }
+
+        await claw.shutdown();
+        process.exit(1);
+      }
     }
-  });
+  );
 
 ig.command('comment <url> <text>')
   .description('Comment on an Instagram post')
+  .option('-s, --session <name>', 'Session profile name (e.g. work, personal)', 'default')
   .option('-c, --context <json>', 'JSON context for notification')
   .option('-r, --retries <number>', 'Number of retry attempts on failure', String(DEFAULT_RETRIES))
-  .action(async (url: string, text: string, options: { context?: string; retries?: string }) => {
-    const retries = parseRetries(options.retries);
-    const context = parseContext(options.context);
-    if (context) process.env.SOCIALCRABS_SILENT = '1';
+  .action(
+    async (
+      url: string,
+      text: string,
+      options: { context?: string; retries?: string; session: string }
+    ) => {
+      const retries = parseRetries(options.retries);
+      const context = parseContext(options.context);
+      if (context) process.env.SOCIALCRABS_SILENT = '1';
 
-    const claw = new SocialCrabs({ browser: { headless: true } });
+      const claw = new SocialCrabs({
+        browser: { headless: true },
+        session: { profile: options.session },
+      });
 
-    try {
-      await claw.initialize();
+      try {
+        await claw.initialize();
 
-      await withRetry(
-        async () => {
-          const res = await claw.instagram.comment({ url, text });
-          if (!res.success) throw new Error(res.error || 'Comment failed');
-          return res;
-        },
-        { retries, actionName: 'IG comment', target: url }
-      );
-
-      console.log(`✅ Commented on: ${url}`);
-
-      if (context) {
-        await sendNotificationWithContext(claw, 'instagram', 'comment', true, url, {
-          postUrl: url,
-          commentText: text,
-          ...context,
-        });
-      }
-
-      await claw.shutdown();
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      console.log(`❌ Failed to comment after ${retries} attempts: ${errorMsg}`);
-
-      if (context) {
-        await sendNotificationWithContext(
-          claw,
-          'instagram',
-          'comment',
-          false,
-          url,
-          context,
-          errorMsg
+        await withRetry(
+          async () => {
+            const res = await claw.instagram.comment({ url, text });
+            if (!res.success) throw new Error(res.error || 'Comment failed');
+            return res;
+          },
+          { retries, actionName: 'IG comment', target: url }
         );
-      }
 
-      await claw.shutdown();
-      process.exit(1);
+        console.log(`✅ Commented on: ${url}`);
+
+        if (context) {
+          await sendNotificationWithContext(claw, 'instagram', 'comment', true, url, {
+            postUrl: url,
+            commentText: text,
+            ...context,
+          });
+        }
+
+        await claw.shutdown();
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        console.log(`❌ Failed to comment after ${retries} attempts: ${errorMsg}`);
+
+        if (context) {
+          await sendNotificationWithContext(
+            claw,
+            'instagram',
+            'comment',
+            false,
+            url,
+            context,
+            errorMsg
+          );
+        }
+
+        await claw.shutdown();
+        process.exit(1);
+      }
     }
-  });
+  );
 
 ig.command('dm <username> <message>')
   .description('Send a DM to an Instagram user')
-  .action(async (username: string, message: string) => {
+  .option('-s, --session <name>', 'Session profile name (e.g. work, personal)', 'default')
+  .action(async (username: string, message: string, options: { session: string }) => {
     try {
-      const claw = new SocialCrabs({ browser: { headless: true } });
+      const claw = new SocialCrabs({
+        browser: { headless: true },
+        session: { profile: options.session },
+      });
       await claw.initialize();
 
       const result = await claw.instagram.dm({ username, message });
@@ -464,9 +502,13 @@ ig.command('dm <username> <message>')
 
 ig.command('profile <username>')
   .description('Get Instagram profile data')
-  .action(async (username: string) => {
+  .option('-s, --session <name>', 'Session profile name (e.g. work, personal)', 'default')
+  .action(async (username: string, options: { session: string }) => {
     try {
-      const claw = new SocialCrabs({ browser: { headless: true } });
+      const claw = new SocialCrabs({
+        browser: { headless: true },
+        session: { profile: options.session },
+      });
       await claw.initialize();
 
       const profile = await claw.instagram.getProfile(username);
@@ -481,10 +523,14 @@ ig.command('profile <username>')
 
 ig.command('followers <username>')
   .description('Scrape followers from an Instagram profile')
+  .option('-s, --session <name>', 'Session profile name (e.g. work, personal)', 'default')
   .option('-n, --limit <number>', 'Max followers to scrape', '10')
-  .action(async (username: string, options: { limit: string }) => {
+  .action(async (username: string, options: { limit: string; session: string }) => {
     try {
-      const claw = new SocialCrabs({ browser: { headless: true } });
+      const claw = new SocialCrabs({
+        browser: { headless: true },
+        session: { profile: options.session },
+      });
       await claw.initialize();
 
       const limit = parseInt(options.limit, 10);
@@ -503,10 +549,14 @@ ig.command('followers <username>')
 
 ig.command('posts <username>')
   .description('Get recent posts from an Instagram profile')
+  .option('-s, --session <name>', 'Session profile name (e.g. work, personal)', 'default')
   .option('-n, --limit <number>', 'Max posts to get', '3')
-  .action(async (username: string, options: { limit: string }) => {
+  .action(async (username: string, options: { limit: string; session: string }) => {
     try {
-      const claw = new SocialCrabs({ browser: { headless: true } });
+      const claw = new SocialCrabs({
+        browser: { headless: true },
+        session: { profile: options.session },
+      });
       await claw.initialize();
 
       const limit = parseInt(options.limit, 10);
@@ -525,10 +575,14 @@ ig.command('posts <username>')
 
 ig.command('hashtag-posts <hashtag>')
   .description('Find Instagram medias by hashtag')
+  .option('-s, --session <name>', 'Session profile name (e.g. work, personal)', 'default')
   .option('-n, --limit <number>', 'Max medias to return', '12')
-  .action(async (hashtag: string, options: { limit: string }) => {
+  .action(async (hashtag: string, options: { limit: string; session: string }) => {
     try {
-      const claw = new SocialCrabs({ browser: { headless: true } });
+      const claw = new SocialCrabs({
+        browser: { headless: true },
+        session: { profile: options.session },
+      });
       await claw.initialize();
 
       const limit = parseInt(options.limit, 10);
@@ -554,9 +608,13 @@ ig.command('hashtag-posts <hashtag>')
 
 ig.command('post-detail <url>')
   .description('Check detail data of an Instagram post')
-  .action(async (url: string) => {
+  .option('-s, --session <name>', 'Session profile name (e.g. work, personal)', 'default')
+  .action(async (url: string, options: { session: string }) => {
     try {
-      const claw = new SocialCrabs({ browser: { headless: true } });
+      const claw = new SocialCrabs({
+        browser: { headless: true },
+        session: { profile: options.session },
+      });
       await claw.initialize();
 
       const detail = await claw.instagram.checkPostDetail(url);
@@ -583,10 +641,14 @@ const facebook = program.command('facebook').alias('fb').description('Facebook a
 facebook
   .command('group-crawler <groupId>')
   .description('Crawl posts from a Facebook group')
+  .option('-s, --session <name>', 'Session profile name (e.g. work, personal)', 'default')
   .option('-n, --limit <number>', 'Max posts to crawl', '10')
-  .action(async (groupId: string, options: { limit: string }) => {
+  .action(async (groupId: string, options: { limit: string; session: string }) => {
     try {
-      const claw = new SocialCrabs({ browser: { headless: true } });
+      const claw = new SocialCrabs({
+        browser: { headless: true },
+        session: { profile: options.session },
+      });
       await claw.initialize();
 
       const limit = parseInt(options.limit, 10);
@@ -611,14 +673,18 @@ const twitter = program.command('twitter').alias('x').description('Twitter/X act
 twitter
   .command('like <url>')
   .description('Like a tweet')
+  .option('-s, --session <name>', 'Session profile name (e.g. work, personal)', 'default')
   .option('-c, --context <json>', 'JSON context for notification (language, behaviors, etc.)')
   .option('-r, --retries <number>', 'Number of retry attempts on failure', String(DEFAULT_RETRIES))
-  .action(async (url: string, options: { context?: string; retries?: string }) => {
+  .action(async (url: string, options: { context?: string; retries?: string; session: string }) => {
     const retries = parseRetries(options.retries);
     const context = parseContext(options.context);
     if (context) process.env.SOCIALCRABS_SILENT = '1';
 
-    const claw = new SocialCrabs({ browser: { headless: true } });
+    const claw = new SocialCrabs({
+      browser: { headless: true },
+      session: { profile: options.session },
+    });
 
     try {
       await claw.initialize();
@@ -658,9 +724,13 @@ twitter
 twitter
   .command('tweet <text>')
   .description('Post a tweet')
-  .action(async (text: string) => {
+  .option('-s, --session <name>', 'Session profile name (e.g. work, personal)', 'default')
+  .action(async (text: string, options: { session: string }) => {
     try {
-      const claw = new SocialCrabs({ browser: { headless: true } });
+      const claw = new SocialCrabs({
+        browser: { headless: true },
+        session: { profile: options.session },
+      });
       await claw.initialize();
 
       const result = await claw.twitter.post({ text });
@@ -684,78 +754,91 @@ twitter
 twitter
   .command('follow <username>')
   .description('Follow a Twitter user')
+  .option('-s, --session <name>', 'Session profile name (e.g. work, personal)', 'default')
   .option('-c, --context <json>', 'JSON context for notification')
   .option('-r, --retries <number>', 'Number of retry attempts on failure', String(DEFAULT_RETRIES))
-  .action(async (usernameOrUrl: string, options: { context?: string; retries?: string }) => {
-    const retries = parseRetries(options.retries);
-    const context = parseContext(options.context);
-    if (context) process.env.SOCIALCRABS_SILENT = '1';
+  .action(
+    async (
+      usernameOrUrl: string,
+      options: { context?: string; retries?: string; session: string }
+    ) => {
+      const retries = parseRetries(options.retries);
+      const context = parseContext(options.context);
+      if (context) process.env.SOCIALCRABS_SILENT = '1';
 
-    // Extract username from URL if needed
-    let username = usernameOrUrl;
-    if (usernameOrUrl.includes('x.com/') || usernameOrUrl.includes('twitter.com/')) {
-      const match = usernameOrUrl.match(/(?:x\.com|twitter\.com)\/(@?[\w]+)/);
-      if (match) {
-        username = match[1].replace('@', '');
+      // Extract username from URL if needed
+      let username = usernameOrUrl;
+      if (usernameOrUrl.includes('x.com/') || usernameOrUrl.includes('twitter.com/')) {
+        const match = usernameOrUrl.match(/(?:x\.com|twitter\.com)\/(@?[\w]+)/);
+        if (match) {
+          username = match[1].replace('@', '');
+        }
       }
-    }
-    username = username.replace(/^@/, '');
+      username = username.replace(/^@/, '');
 
-    const claw = new SocialCrabs({ browser: { headless: true } });
+      const claw = new SocialCrabs({
+        browser: { headless: true },
+        session: { profile: options.session },
+      });
 
-    try {
-      await claw.initialize();
+      try {
+        await claw.initialize();
 
-      await withRetry(
-        async () => {
-          const res = await claw.twitter.follow({ username });
-          if (!res.success) throw new Error(res.error || 'Follow failed');
-          return res;
-        },
-        { retries, actionName: 'X follow', target: `@${username}` }
-      );
-
-      console.log(`✅ Followed: @${username}`);
-
-      if (context) {
-        await sendNotificationWithContext(claw, 'twitter', 'follow', true, username, {
-          profileUrl: `https://x.com/${username}`,
-          ...context,
-        });
-      }
-
-      await claw.shutdown();
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      console.log(`❌ Failed to follow @${username} after ${retries} attempts: ${errorMsg}`);
-
-      if (context) {
-        await sendNotificationWithContext(
-          claw,
-          'twitter',
-          'follow',
-          false,
-          username,
-          context,
-          errorMsg
+        await withRetry(
+          async () => {
+            const res = await claw.twitter.follow({ username });
+            if (!res.success) throw new Error(res.error || 'Follow failed');
+            return res;
+          },
+          { retries, actionName: 'X follow', target: `@${username}` }
         );
-      }
 
-      await claw.shutdown();
-      process.exit(1);
+        console.log(`✅ Followed: @${username}`);
+
+        if (context) {
+          await sendNotificationWithContext(claw, 'twitter', 'follow', true, username, {
+            profileUrl: `https://x.com/${username}`,
+            ...context,
+          });
+        }
+
+        await claw.shutdown();
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        console.log(`❌ Failed to follow @${username} after ${retries} attempts: ${errorMsg}`);
+
+        if (context) {
+          await sendNotificationWithContext(
+            claw,
+            'twitter',
+            'follow',
+            false,
+            username,
+            context,
+            errorMsg
+          );
+        }
+
+        await claw.shutdown();
+        process.exit(1);
+      }
     }
-  });
+  );
 
 twitter
   .command('reply <url> <text>')
   .description('Reply to a tweet')
+  .option('-s, --session <name>', 'Session profile name (e.g. work, personal)', 'default')
   .option('-c, --context <json>', 'JSON context for notification')
-  .action(async (url: string, text: string, options: { context?: string }) => {
+  .action(async (url: string, text: string, options: { context?: string; session: string }) => {
     try {
       const context = parseContext(options.context);
       if (context) process.env.SOCIALCRABS_SILENT = '1';
 
-      const claw = new SocialCrabs({ browser: { headless: true } });
+      const claw = new SocialCrabs({
+        browser: { headless: true },
+        session: { profile: options.session },
+      });
       await claw.initialize();
 
       const result = await claw.twitter.comment({ url, text });
@@ -954,69 +1037,82 @@ const linkedin = program.command('linkedin').alias('li').description('LinkedIn a
 linkedin
   .command('connect <url>')
   .description('Send a connection request')
+  .option('-s, --session <name>', 'Session profile name (e.g. work, personal)', 'default')
   .option('-n, --note <note>', 'Add a note to the connection request')
   .option('-c, --context <json>', 'JSON context for notification')
   .option('-r, --retries <number>', 'Number of retry attempts on failure', String(DEFAULT_RETRIES))
-  .action(async (url: string, options: { note?: string; context?: string; retries?: string }) => {
-    const retries = parseRetries(options.retries);
-    const context = parseContext(options.context);
-    if (context) process.env.SOCIALCRABS_SILENT = '1';
+  .action(
+    async (
+      url: string,
+      options: { session: string; note?: string; context?: string; retries?: string }
+    ) => {
+      const retries = parseRetries(options.retries);
+      const context = parseContext(options.context);
+      if (context) process.env.SOCIALCRABS_SILENT = '1';
 
-    const claw = new SocialCrabs({ browser: { headless: true } });
+      const claw = new SocialCrabs({
+        browser: { headless: true },
+        session: { profile: options.session },
+      });
 
-    try {
-      await claw.initialize();
+      try {
+        await claw.initialize();
 
-      await withRetry(
-        async () => {
-          const res = await claw.linkedin.connect({
+        await withRetry(
+          async () => {
+            const res = await claw.linkedin.connect({
+              profileUrl: url,
+              note: options.note,
+            });
+            if (!res.success) throw new Error(res.error || 'Connect failed');
+            return res;
+          },
+          { retries, actionName: 'LinkedIn connect', target: url }
+        );
+
+        console.log(`✅ Sent connection request to: ${url}`);
+
+        if (context) {
+          await sendNotificationWithContext(claw, 'linkedin', 'connect', true, url, {
             profileUrl: url,
             note: options.note,
+            ...context,
           });
-          if (!res.success) throw new Error(res.error || 'Connect failed');
-          return res;
-        },
-        { retries, actionName: 'LinkedIn connect', target: url }
-      );
+        }
 
-      console.log(`✅ Sent connection request to: ${url}`);
+        await claw.shutdown();
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        console.log(`❌ Failed to connect after ${retries} attempts: ${errorMsg}`);
 
-      if (context) {
-        await sendNotificationWithContext(claw, 'linkedin', 'connect', true, url, {
-          profileUrl: url,
-          note: options.note,
-          ...context,
-        });
+        if (context) {
+          await sendNotificationWithContext(
+            claw,
+            'linkedin',
+            'connect',
+            false,
+            url,
+            context,
+            errorMsg
+          );
+        }
+
+        await claw.shutdown();
+        process.exit(1);
       }
-
-      await claw.shutdown();
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      console.log(`❌ Failed to connect after ${retries} attempts: ${errorMsg}`);
-
-      if (context) {
-        await sendNotificationWithContext(
-          claw,
-          'linkedin',
-          'connect',
-          false,
-          url,
-          context,
-          errorMsg
-        );
-      }
-
-      await claw.shutdown();
-      process.exit(1);
     }
-  });
+  );
 
 linkedin
   .command('message <url> <text>')
   .description('Send a LinkedIn message')
-  .action(async (url: string, text: string) => {
+  .option('-s, --session <name>', 'Session profile name (e.g. work, personal)', 'default')
+  .action(async (url: string, text: string, options: { session: string }) => {
     try {
-      const claw = new SocialCrabs({ browser: { headless: true } });
+      const claw = new SocialCrabs({
+        browser: { headless: true },
+        session: { profile: options.session },
+      });
       await claw.initialize();
 
       const result = await claw.linkedin.dm({ username: url, message: text });
@@ -1037,9 +1133,13 @@ linkedin
 linkedin
   .command('like <url>')
   .description('Like a LinkedIn post')
-  .action(async (url: string) => {
+  .option('-s, --session <name>', 'Session profile name (e.g. work, personal)', 'default')
+  .action(async (url: string, options: { session: string }) => {
     try {
-      const claw = new SocialCrabs({ browser: { headless: true } });
+      const claw = new SocialCrabs({
+        browser: { headless: true },
+        session: { profile: options.session },
+      });
       await claw.initialize();
 
       const result = await claw.linkedin.like({ url });
@@ -1060,9 +1160,13 @@ linkedin
 linkedin
   .command('profile <username>')
   .description('Get LinkedIn profile data')
-  .action(async (username: string) => {
+  .option('-s, --session <name>', 'Session profile name (e.g. work, personal)', 'default')
+  .action(async (username: string, options: { session: string }) => {
     try {
-      const claw = new SocialCrabs({ browser: { headless: true } });
+      const claw = new SocialCrabs({
+        browser: { headless: true },
+        session: { profile: options.session },
+      });
       await claw.initialize();
 
       const profile = await claw.linkedin.getProfile(username);
@@ -1078,9 +1182,13 @@ linkedin
 linkedin
   .command('comment <url> <text>')
   .description('Comment on a LinkedIn post')
-  .action(async (url: string, text: string) => {
+  .option('-s, --session <name>', 'Session profile name (e.g. work, personal)', 'default')
+  .action(async (url: string, text: string, options: { session: string }) => {
     try {
-      const claw = new SocialCrabs({ browser: { headless: true } });
+      const claw = new SocialCrabs({
+        browser: { headless: true },
+        session: { profile: options.session },
+      });
       await claw.initialize();
 
       const result = await claw.linkedin.comment({ url, text });
@@ -1101,10 +1209,14 @@ linkedin
 linkedin
   .command('search <query>')
   .description('Search LinkedIn for content')
+  .option('-s, --session <name>', 'Session profile name (e.g. work, personal)', 'default')
   .option('-o, --output <file>', 'Save HTML to file')
-  .action(async (query: string, options: { output?: string }) => {
+  .action(async (query: string, options: { output?: string; session: string }) => {
     try {
-      const claw = new SocialCrabs({ browser: { headless: true } });
+      const claw = new SocialCrabs({
+        browser: { headless: true },
+        session: { profile: options.session },
+      });
       await claw.initialize();
 
       const result = await claw.linkedin.search(query);

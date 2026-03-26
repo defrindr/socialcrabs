@@ -101,6 +101,7 @@ export function loadConfig(): ResolvedConfig {
     },
     session: {
       dir: getEnvString('SESSION_DIR', './sessions'),
+      profile: process.env.SESSION_PROFILE,
       encryptionKey: process.env.COOKIE_ENCRYPTION_KEY,
     },
     logging: {

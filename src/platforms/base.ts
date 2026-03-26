@@ -22,6 +22,7 @@ import type {
   DMPayload,
   RateLimitStatus,
   NotificationPayload,
+  IsLoginOptions,
 } from '../types/index.js';
 
 export abstract class BasePlatformHandler {
@@ -375,7 +376,7 @@ export abstract class BasePlatformHandler {
   }
 
   // Abstract methods that must be implemented by each platform
-  abstract isLoggedIn(): Promise<boolean>;
+  abstract isLoggedIn(options: IsLoginOptions): Promise<boolean>;
   abstract login(): Promise<boolean>;
   abstract logout(): Promise<void>;
   abstract like(payload: LikePayload): Promise<ActionResult>;

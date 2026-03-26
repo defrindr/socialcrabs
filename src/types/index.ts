@@ -77,12 +77,17 @@ export interface DelayConfig {
 
 export interface SessionConfig {
   dir: string;
+  profile?: string;
   encryptionKey?: string;
 }
 
 export interface LoggingConfig {
   level: 'debug' | 'info' | 'warn' | 'error';
   file?: string;
+}
+
+export interface IsLoginOptions {
+  withRedirect?: boolean;
 }
 
 // ============================================================================

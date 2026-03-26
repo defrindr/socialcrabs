@@ -1,4 +1,5 @@
 import { BrowserManager } from './browser/manager.js';
+import path from 'path';
 import { RateLimiter, DEFAULT_RATE_LIMITS } from './utils/rate-limiter.js';
 import { InstagramHandler } from './platforms/instagram.js';
 import { TwitterHandler } from './platforms/twitter.js';
@@ -70,6 +71,18 @@ export class SocialCrabs {
       },
     };
 
+    const rawProfile = this.config.session.profile?.trim();
+    const normalizedProfile = rawProfile ? rawProfile.replace(/[^a-zA-Z0-9_-]/g, '-') : undefined;
+    const resolvedSessionDir = normalizedProfile
+      ? path.join(this.config.session.dir, normalizedProfile)
+      : this.config.session.dir;
+
+    this.config.session = {
+      ...this.config.session,
+      profile: normalizedProfile,
+      dir: resolvedSessionDir,
+    };
+
     // Initialize logger
     initLogger(this.config.logging.level, this.config.logging.file);
 
@@ -105,6 +118,7 @@ export class SocialCrabs {
     log.info('SocialCrabs initialized', {
       headless: this.config.browser.headless,
       sessionDir: this.config.session.dir,
+      sessionProfile: this.config.session.profile || 'default',
       notificationsEnabled: this.config.notifications.enabled,
     });
   }
@@ -157,7 +171,7 @@ export class SocialCrabs {
       case 'linkedin':
         return this.linkedin.isLoggedIn();
       case 'facebook':
-        return this.facebook.isLoggedIn();
+        return this.facebook.isLoggedIn({ withRedirect: true });
       default:
         throw new Error(`Unknown platform: ${platform}`);
     }

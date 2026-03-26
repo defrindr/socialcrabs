@@ -6,6 +6,7 @@ import type {
   CommentPayload,
   DMPayload,
   FollowPayload,
+  IsLoginOptions,
   LikePayload,
 } from '../types/index.js';
 import { log } from '../utils/logger.js';
@@ -32,9 +33,12 @@ export class FacebookHandler extends BasePlatformHandler {
     super('facebook', browserManager, rateLimiter);
   }
 
-  async isLoggedIn(): Promise<boolean> {
+  async isLoggedIn({ withRedirect = true }: IsLoginOptions): Promise<boolean> {
     try {
-      await this.navigate(`${this.baseUrl}/`);
+      if (withRedirect) {
+        await this.navigate(`${this.baseUrl}/`);
+      }
+
       await this.delay();
 
       const page = await this.getPage();
@@ -72,7 +76,7 @@ export class FacebookHandler extends BasePlatformHandler {
       await this.navigate(`${this.baseUrl}/login`);
       await this.delay();
 
-      if (await this.isLoggedIn()) {
+      if (await this.isLoggedIn({ withRedirect: false })) {
         log.info('Already logged in to Facebook');
         return true;
       }
@@ -88,7 +92,7 @@ export class FacebookHandler extends BasePlatformHandler {
       const timeout = 36000000;
 
       while (Date.now() - startTime < timeout) {
-        if (await this.isLoggedIn()) {
+        if (await this.isLoggedIn({ withRedirect: false })) {
           await this.browserManager.saveSession('facebook');
           log.info('Facebook login successful');
           return true;
@@ -106,13 +110,13 @@ export class FacebookHandler extends BasePlatformHandler {
 
   async loginWithCredentials(username: string, password: string): Promise<boolean> {
     try {
-      // if (await this.isLoggedIn()) {
-      //   log.info('Already logged in to Facebook');
-      //   return true;
-      // }
-
       await this.navigate(`${this.baseUrl}/login`);
       await this.delay();
+
+      if (await this.isLoggedIn({ withRedirect: false })) {
+        log.info('Already logged in to Facebook');
+        return true;
+      }
 
       const page = await this.getPage();
       await page.screenshot({
@@ -146,6 +150,12 @@ export class FacebookHandler extends BasePlatformHandler {
       await page.screenshot({
         path: './sessions/debug-facebook-login-click-login.png',
       });
+
+      if (await this.isLoggedIn({ withRedirect: false })) {
+        await this.browserManager.saveSession('facebook');
+        log.info('Facebook login successful after captcha');
+        return true;
+      }
 
       const captcha = await page.locator(SELECTORS.captchaImage);
       const hasCaptcha = await captcha.isVisible().catch((e) => {
@@ -203,7 +213,7 @@ export class FacebookHandler extends BasePlatformHandler {
           path: './sessions/debug-facebook-login-after-captcha-submit.png',
         });
 
-        if (await this.isLoggedIn()) {
+        if (await this.isLoggedIn({ withRedirect: false })) {
           await this.browserManager.saveSession('facebook');
           log.info('Facebook login successful after captcha');
           return true;
