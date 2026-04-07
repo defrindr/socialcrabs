@@ -1,9 +1,14 @@
-import { chromium, Browser, BrowserContext, Page } from 'playwright';
+import { Browser, BrowserContext, Page } from 'playwright';
 import fs from 'fs';
 import path from 'path';
 import { log } from '../utils/logger.js';
 import { pageLoadDelay } from '../utils/delays.js';
 import type { Platform, BrowserConfig, Session } from '../types/index.js';
+import { getIpLocationData } from './ipAddress.js';
+import { chromium } from 'playwright-extra';
+import StealthPlugin from 'puppeteer-extra-plugin-stealth';
+
+chromium.use(StealthPlugin());
 
 export class BrowserManager {
   private browser: Browser | null = null;
@@ -97,18 +102,24 @@ export class BrowserManager {
       fs.mkdirSync(contextDir, { recursive: true });
     }
 
+    const locationData = await getIpLocationData();
+    console.log('IP Location Data:', locationData);
+
     context = await this.browser.newContext({
       viewport: this.config.viewport,
       userAgent: this.config.userAgent || this.getDefaultUserAgent(),
-      locale: 'en-US',
-      timezoneId: 'America/New_York',
+      locale: locationData.locale,
+      timezoneId: locationData.timezone,
       permissions: ['geolocation'],
-      geolocation: { latitude: 40.7128, longitude: -74.006 },
+      geolocation: {
+        latitude: locationData.lat,
+        longitude: locationData.lon,
+      },
       storageState: undefined,
     });
 
     // Apply stealth modifications
-    await this.applyStealthMode(context);
+    // await this.applyStealthMode(context);
 
     // Restore session if available
     await this.restoreSession(platform, context);
@@ -165,6 +176,25 @@ export class BrowserManager {
     await pageLoadDelay();
 
     return page;
+  }
+
+  async clearSession(platform: Platform): Promise<void> {
+    // tutup context kalau aktif
+    await this.closeContext(platform).catch(() => undefined);
+
+    // hapus session file/folder jika ada
+    const sessionDir = path.resolve(process.cwd(), 'sessions', platform);
+    if (fs.existsSync(sessionDir)) {
+      await fs.promises.rm(sessionDir, { recursive: true, force: true });
+    }
+
+    // optional: clear global storage untuk browser context
+    const context = this.contexts.get(platform);
+    if (context) {
+      await context.clearCookies().catch(() => undefined);
+      await context.clearPermissions().catch(() => undefined);
+      await context.close().catch(() => undefined);
+    }
   }
 
   /**
@@ -378,49 +408,50 @@ export class BrowserManager {
   /**
    * Apply stealth mode to avoid detection
    */
-  private async applyStealthMode(context: BrowserContext): Promise<void> {
-    await context.addInitScript(`
-      // Override webdriver property
-      Object.defineProperty(navigator, 'webdriver', {
-        get: () => undefined,
-      });
+  // private async applyStealthMode(context: BrowserContext): Promise<void> {
+  //   await context.addInitScript(`
+  //     // Override webdriver property
+  //     Object.defineProperty(navigator, 'webdriver', {
+  //       get: () => undefined,
+  //     });
 
-      // Override chrome property
-      window.chrome = { runtime: {} };
+  //     // Override chrome property
+  //     window.chrome = { runtime: {} };
 
-      // Override permissions
-      const originalQuery = navigator.permissions.query.bind(navigator.permissions);
-      navigator.permissions.query = (parameters) =>
-        parameters.name === 'notifications'
-          ? Promise.resolve({ state: 'denied', onchange: null })
-          : originalQuery(parameters);
+  //     // Override permissions
+  //     const originalQuery = navigator.permissions.query.bind(navigator.permissions);
+  //     navigator.permissions.query = (parameters) =>
+  //       parameters.name === 'notifications'
+  //         ? Promise.resolve({ state: 'denied', onchange: null })
+  //         : originalQuery(parameters);
 
-      // Override plugins
-      Object.defineProperty(navigator, 'plugins', {
-        get: () => [1, 2, 3, 4, 5],
-      });
+  //     // Override plugins
+  //     Object.defineProperty(navigator, 'plugins', {
+  //       get: () => [1, 2, 3, 4, 5],
+  //     });
 
-      // Override languages
-      Object.defineProperty(navigator, 'languages', {
-        get: () => ['en-US', 'en'],
-      });
+  //     // Override languages
+  //     Object.defineProperty(navigator, 'languages', {
+  //       get: () => ['en-US', 'en'],
+  //     });
 
-      // Override platform
-      Object.defineProperty(navigator, 'platform', {
-        get: () => 'Win32',
-      });
+  //     // Override platform
+  //     Object.defineProperty(navigator, 'platform', {
+  //       get: () => 'Win32',
+  //     });
 
-      // Hide automation indicators
-      delete window.__playwright;
-      delete window.__pw_manual;
-    `);
-  }
+  //     // Hide automation indicators
+  //     delete window.__playwright;
+  //     delete window.__pw_manual;
+  //   `);
+  // }
 
   /**
    * Get default user agent
    */
   private getDefaultUserAgent(): string {
-    return 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+    return "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.150 Safari/537.36"
+    // return 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
   }
 
   /**

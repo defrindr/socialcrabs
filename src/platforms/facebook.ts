@@ -110,13 +110,9 @@ export class FacebookHandler extends BasePlatformHandler {
 
   async loginWithCredentials(username: string, password: string): Promise<boolean> {
     try {
+      // When we added login checker, Facebook started blocking headless login attempts with a recaptcha.
       await this.navigate(`${this.baseUrl}/login`);
       await this.delay();
-
-      if (await this.isLoggedIn({ withRedirect: false })) {
-        log.info('Already logged in to Facebook');
-        return true;
-      }
 
       const page = await this.getPage();
       await page.screenshot({
@@ -146,22 +142,25 @@ export class FacebookHandler extends BasePlatformHandler {
       }
       await this.delay();
       await this.think();
+      await this.delay();
+      await this.think();
 
       await page.screenshot({
         path: './sessions/debug-facebook-login-click-login.png',
       });
 
-      if (await this.isLoggedIn({ withRedirect: false })) {
-        await this.browserManager.saveSession('facebook');
-        log.info('Facebook login successful after captcha');
-        return true;
-      }
+      // if (await this.isLoggedIn({ withRedirect: false })) {
+      //   await this.browserManager.saveSession('facebook');
+      //   log.info('Facebook login successful after captcha');
+      //   return true;
+      // }
 
       const captcha = await page.locator(SELECTORS.captchaImage);
       const hasCaptcha = await captcha.isVisible().catch((e) => {
         console.log(e);
         return false;
       });
+
       if (hasCaptcha) {
         await this.think();
         log.warn('Facebook login blocked by captcha. Please solve it manually in the browser.');
@@ -171,10 +170,10 @@ export class FacebookHandler extends BasePlatformHandler {
 
         console.log(
           'Captcha:' +
-            (await captcha
-              .first()
-              .getAttribute('src')
-              .catch(() => 'N/A'))
+          (await captcha
+            .first()
+            .getAttribute('src')
+            .catch(() => 'N/A'))
         );
 
         // input captcha solution and wait for login
