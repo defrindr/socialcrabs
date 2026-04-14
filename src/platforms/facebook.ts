@@ -1,3 +1,4 @@
+import { log } from './../utils/logger';
 import path from 'path';
 import fs from 'fs';
 import type { BrowserManager } from '../browser/manager.js';
@@ -9,10 +10,11 @@ import type {
   IsLoginOptions,
   LikePayload,
 } from '../types/index.js';
-import { log } from '../utils/logger.js';
+// import { log } from '../utils/logger.js';
 import type { RateLimiter } from '../utils/rate-limiter.js';
 import { parseFacebookGroupFeedPayload } from '../extractor/facebook/group-feed.js';
 import { BasePlatformHandler } from './base.js';
+import { solveCaptchaWithLLM } from '../utils/captcha-resolver';
 
 const SELECTORS = {
   loggedInFeed: '[aria-label="Your profile"],[aria-label="Profil Anda"]',
@@ -168,6 +170,29 @@ export class FacebookHandler extends BasePlatformHandler {
           path: './sessions/debug-facebook-login-captcha.png',
         });
 
+        // Save a tight crop of captcha image to make manual solving easier.
+        let captchaSolution = null;
+        const captchaBox = await captcha.first().boundingBox().catch(() => null);
+        if (captchaBox) {
+          await page.screenshot({
+            path: './sessions/debug-facebook-login-captcha-crop.png',
+            clip: {
+              x: Math.max(0, captchaBox.x),
+              y: Math.max(0, captchaBox.y),
+              width: Math.max(1, captchaBox.width),
+              height: Math.max(1, captchaBox.height),
+            },
+          });
+          
+          const cropPath = './sessions/debug-facebook-login-captcha-crop.png';
+          const b64 = fs.readFileSync(cropPath, { encoding: 'base64' });
+
+          captchaSolution = await solveCaptchaWithLLM(b64);
+          console.log('LLM-solved captcha solution:', captchaSolution);
+
+
+        }
+
         console.log(
           'Captcha:' +
           (await captcha
@@ -188,19 +213,24 @@ export class FacebookHandler extends BasePlatformHandler {
         }
 
         // input from terminal
-        const readline = await import('readline');
-        const rl = readline.createInterface({
-          input: process.stdin,
-          output: process.stdout,
-        });
+        if (!captchaSolution) {
+          const readline = await import('readline');
+          const rl = readline.createInterface({
+            input: process.stdin,
+            output: process.stdout,
+          });
 
-        const question = (query: string): Promise<string> => {
-          return new Promise((resolve) => rl.question(query, resolve));
-        };
+          const question = (query: string): Promise<string> => {
+            return new Promise((resolve) => rl.question(query, resolve));
+          };
 
-        const answer = await question('Enter captcha solution: ');
-        await captchaInput.fill(answer.trim());
-        rl.close();
+          const answer = await question('Enter captcha solution: ');
+          await captchaInput.fill(answer.trim());
+          rl.close();
+        } else {
+          await captchaInput.fill(captchaSolution);
+        }
+
         await page.screenshot({
           path: './sessions/debug-facebook-login-after-captcha.png',
         });

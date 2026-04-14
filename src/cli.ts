@@ -123,6 +123,7 @@ program
         browser: {
           headless: options.headless,
         },
+        session: { profile: 'default' },
       });
 
       await claw.initialize();

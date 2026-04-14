@@ -7,6 +7,20 @@ import type { Platform } from '../types/index.js';
 export function createHttpServer(socialCrabs: SocialCrabs, apiKey?: string) {
   const app = express();
 
+  const parsePositiveInt = (value: unknown): number | null => {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      const floored = Math.floor(value);
+      return floored > 0 ? floored : null;
+    }
+
+    if (typeof value === 'string' && value.trim() !== '') {
+      const parsed = Number.parseInt(value, 10);
+      return Number.isNaN(parsed) || parsed <= 0 ? null : parsed;
+    }
+
+    return null;
+  };
+
   // Middleware
   app.use(cors());
   app.use(express.json());
@@ -178,6 +192,38 @@ export function createHttpServer(socialCrabs: SocialCrabs, apiKey?: string) {
       res.json(profile);
     } catch (error) {
       log.error('Error getting Instagram profile', { error: String(error) });
+      res.status(500).json({ error: String(error) });
+    }
+  });
+
+  app.post('/api/crawl/instagram/hashtag', async (req: Request, res: Response) => {
+    try {
+      const rawTag =
+        (typeof req.body?.hashtag === 'string' ? req.body.hashtag : null) ??
+        (typeof req.body?.query === 'string' ? req.body.query : null);
+
+      const hashtag = rawTag?.replace(/^#/, '').trim() ?? '';
+      if (!hashtag) {
+        res.status(400).json({ error: 'hashtag or query required' });
+        return;
+      }
+
+      const requestedLimit = parsePositiveInt(req.body?.limit);
+      const limit = Math.max(1, Math.min(requestedLimit ?? 20, 100));
+      const startedAt = Date.now();
+
+      const data = await socialCrabs.instagram.findPostsByHashtag(hashtag, limit);
+
+      res.json({
+        platform: 'instagram',
+        mode: 'hashtag',
+        query: hashtag,
+        total: data.length,
+        durationMs: Date.now() - startedAt,
+        data,
+      });
+    } catch (error) {
+      log.error('Error crawling Instagram hashtag', { error: String(error) });
       res.status(500).json({ error: String(error) });
     }
   });
@@ -358,6 +404,42 @@ export function createHttpServer(socialCrabs: SocialCrabs, apiKey?: string) {
       res.json(profile);
     } catch (error) {
       log.error('Error getting LinkedIn profile', { error: String(error) });
+      res.status(500).json({ error: String(error) });
+    }
+  });
+
+  app.post('/api/crawl/facebook/group', async (req: Request, res: Response) => {
+    try {
+      const groupId =
+        typeof req.body?.groupId === 'string'
+          ? req.body.groupId.trim()
+          : typeof req.body?.query === 'string'
+            ? req.body.query.trim()
+            : '';
+
+      if (!groupId) {
+        res.status(400).json({ error: 'groupId or query required' });
+        return;
+      }
+
+      const requestedLimit = parsePositiveInt(req.body?.limit);
+      const requestedDelay = parsePositiveInt(req.body?.delayMs);
+      const limit = Math.max(1, Math.min(requestedLimit ?? 20, 200));
+      const delayMs = Math.max(500, Math.min(requestedDelay ?? 1500, 10000));
+      const startedAt = Date.now();
+
+      const data = await socialCrabs.facebook.crawlGroupPosts(groupId, { limit, delayMs });
+
+      res.json({
+        platform: 'facebook',
+        mode: 'group',
+        query: groupId,
+        total: data.length,
+        durationMs: Date.now() - startedAt,
+        data,
+      });
+    } catch (error) {
+      log.error('Error crawling Facebook group', { error: String(error) });
       res.status(500).json({ error: String(error) });
     }
   });
